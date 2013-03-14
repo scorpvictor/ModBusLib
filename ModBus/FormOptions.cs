@@ -63,7 +63,13 @@ namespace ModBus
 		{
 			//обновить названия портов
 			SelectPort.Items.Clear();
-			SelectPort.Items.AddRange(SerialPort.GetPortNames());
+			foreach (var portName in SerialPort.GetPortNames())
+			{
+				var fullName = WMITools.GetFullNameComPort(portName);
+				var ci = new COMPortItem {FullName = fullName, Name = portName};
+				if (fullName != null)
+					SelectPort.Items.Add(fullName);
+			}
 			
 		}
 
@@ -74,7 +80,7 @@ namespace ModBus
 			Properties.SettingsOptions.Default.flowControl = (Handshake)comboBoxFlowControl.SelectedItem;
 			Properties.SettingsOptions.Default.baudRate = (int)SelectBaudRate.SelectedItem;
 			Properties.SettingsOptions.Default.dataBits = (int)SelectBits.SelectedItem;
-			Properties.SettingsOptions.Default.comPort = (string)SelectPort.SelectedItem;
+			Properties.SettingsOptions.Default.comPort = SelectPort.SelectedItem.ToString();
 			Properties.SettingsOptions.Default.timeOut = int.Parse(SelectTimeout.Text);
 			Properties.SettingsOptions.Default.numberRepeat = int.Parse(SelectNumberRepeat.Text);
 			Properties.SettingsOptions.Default.Save();
