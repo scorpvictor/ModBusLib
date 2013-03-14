@@ -30,7 +30,6 @@ namespace ModBus
 		{
 			this.buttonOK = new System.Windows.Forms.Button();
 			this.buttonÑancel = new System.Windows.Forms.Button();
-			this.label3 = new System.Windows.Forms.Label();
 			this.SelectTimeout = new System.Windows.Forms.TextBox();
 			this.label8 = new System.Windows.Forms.Label();
 			this.label7 = new System.Windows.Forms.Label();
@@ -70,16 +69,6 @@ namespace ModBus
 			this.buttonÑancel.Text = "Îòìåíà";
 			this.buttonÑancel.UseVisualStyleBackColor = true;
 			// 
-			// label3
-			// 
-			this.label3.AutoSize = true;
-			this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.label3.Location = new System.Drawing.Point(65, 16);
-			this.label3.Name = "label3";
-			this.label3.Size = new System.Drawing.Size(57, 13);
-			this.label3.TabIndex = 10;
-			this.label3.Text = "Íàçâàíèå";
-			// 
 			// SelectTimeout
 			// 
 			this.SelectTimeout.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -111,9 +100,9 @@ namespace ModBus
 			this.SelectPort.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
 			this.SelectPort.FormattingEnabled = true;
 			this.SelectPort.ImeMode = System.Windows.Forms.ImeMode.On;
-			this.SelectPort.Location = new System.Drawing.Point(128, 12);
+			this.SelectPort.Location = new System.Drawing.Point(12, 12);
 			this.SelectPort.Name = "SelectPort";
-			this.SelectPort.Size = new System.Drawing.Size(75, 21);
+			this.SelectPort.Size = new System.Drawing.Size(191, 21);
 			this.SelectPort.TabIndex = 8;
 			// 
 			// label6
@@ -252,7 +241,6 @@ namespace ModBus
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.buttonÑancel;
 			this.ClientSize = new System.Drawing.Size(238, 326);
-			this.Controls.Add(this.label3);
 			this.Controls.Add(this.SelectNumberRepeat);
 			this.Controls.Add(this.SelectTimeout);
 			this.Controls.Add(this.RefreshButton);
@@ -287,7 +275,6 @@ namespace ModBus
 
 		private System.Windows.Forms.Button buttonOK;
 		private System.Windows.Forms.Button buttonÑancel;
-		private System.Windows.Forms.Label label3;
 		private System.Windows.Forms.Button RefreshButton;
 		private System.Windows.Forms.Label label8;
 		private System.Windows.Forms.Label label7;
