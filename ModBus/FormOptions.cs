@@ -53,7 +53,11 @@ namespace ModBus
 			SelectBaudRate.SelectedItem = Properties.SettingsOptions.Default.baudRate;
 			SelectBits.SelectedItem = Properties.SettingsOptions.Default.dataBits;
 			RefreshButton_Click(this, null);
-			SelectPort.SelectedItem = Properties.SettingsOptions.Default.comPort;
+			foreach (var item in SelectPort.Items)
+			{
+				if (((COMPortItem)item).Name == Properties.SettingsOptions.Default.comPort)
+					SelectPort.SelectedItem = item;
+			}
 			SelectTimeout.Text = Properties.SettingsOptions.Default.timeOut.ToString();
 			SelectNumberRepeat.Text = Properties.SettingsOptions.Default.numberRepeat.ToString();
 			
@@ -68,7 +72,7 @@ namespace ModBus
 				var fullName = WMITools.GetFullNameComPort(portName);
 				var ci = new COMPortItem {FullName = fullName, Name = portName};
 				if (fullName != null)
-					SelectPort.Items.Add(fullName);
+					SelectPort.Items.Add(ci);
 			}
 			
 		}
@@ -80,7 +84,7 @@ namespace ModBus
 			Properties.SettingsOptions.Default.flowControl = (Handshake)comboBoxFlowControl.SelectedItem;
 			Properties.SettingsOptions.Default.baudRate = (int)SelectBaudRate.SelectedItem;
 			Properties.SettingsOptions.Default.dataBits = (int)SelectBits.SelectedItem;
-			Properties.SettingsOptions.Default.comPort = SelectPort.SelectedItem.ToString();
+			Properties.SettingsOptions.Default.comPort = ((COMPortItem)SelectPort.SelectedItem).Name;
 			Properties.SettingsOptions.Default.timeOut = int.Parse(SelectTimeout.Text);
 			Properties.SettingsOptions.Default.numberRepeat = int.Parse(SelectNumberRepeat.Text);
 			Properties.SettingsOptions.Default.Save();
