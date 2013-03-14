@@ -10,7 +10,7 @@ namespace ModBus
 	{
 		public static string GetFullNameComPort(string comPort)
 		{
-			var mo = new ManagementObjectSearcher(@"root\cimv2", "SELECT * FROM Win32_PnPEntity WHERE ClassGuid = '{4d36e978-e325-11ce-bfc1-08002be10318}'");
+			var mo = new ManagementObjectSearcher(@"root\cimv2", "SELECT Name FROM Win32_PnPEntity WHERE ClassGuid = '{4d36e978-e325-11ce-bfc1-08002be10318}'");
 			ManagementObjectCollection moc = mo.Get();
 			Regex reg = new Regex("COM(?<number>[0-9]+)");
 			foreach (var o in moc)
