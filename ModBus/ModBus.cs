@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.IO.Ports;
 using System.Windows.Forms;
@@ -119,6 +120,7 @@ namespace ModBus
 		{
 			switch (exc.TargetSite.DeclaringType.Name)
 			{
+				default:
 				case "SerialPort":
 					timerCheck.Stop();
 					timerOut.Stop();
@@ -127,8 +129,6 @@ namespace ModBus
 					this.OnExchangeEnd();
 					return true;
 					break;
-				default:
-					throw exc;
 			}			
 		}
 		/// <summary>
@@ -366,6 +366,11 @@ namespace ModBus
 					if (CatchSerialException(exc))
 						return;
 				}
+				catch (IOException exc)
+				{
+					if (CatchSerialException(exc))
+						return;
+				}
 #if DEBUG
 				foreach (byte b in bufferTransmit)
 				{
@@ -378,8 +383,13 @@ namespace ModBus
 				timerCheck.Start();
 			}
 		}
-		public void OpenPort()
+		/// <summary>
+		/// Открывает порт
+		/// </summary>
+		/// <returns>false - порт не открылся</returns>
+		public bool OpenPort()
 		{
+			bool result = true;
 			try
 			{
 				if (!serialPort.IsOpen)
@@ -394,8 +404,9 @@ namespace ModBus
 			{
 				eventArgument.Status = ModBusStatus.BusyPort;
 				OnExchangeEnd();
-
+				result = false;
 			}
+			return result;
 		}
 
 		public void ClosePort()
