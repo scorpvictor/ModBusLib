@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="COMPortItem.cs" />
+    <Compile Include="CustomSettings.cs" />
     <Compile Include="ErrorCode.cs" />
     <Compile Include="FormOptions.cs">
       <SubType>Form</SubType>
@@ -77,6 +78,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Properties\SettingsOptions.cs" />
     <Compile Include="Properties\SettingsOptions.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>

@@ -36,7 +36,13 @@ namespace ModBus
 		/// </summary>
 		private int numberRepeatMax = 5;
 
+
 		private int counterRepeat;
+
+		/// <summary>
+		/// Файл хранит настройки порта
+		/// </summary>
+		private string _fileName;
 
 		public ModBus()
 		{
@@ -44,7 +50,19 @@ namespace ModBus
 			timerOut.Tick += new EventHandler(timerOut_Tick);
 			timerCheck.Interval = 20;
 			timerCheck.Tick += new EventHandler(timerCheck_Tick);
+		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="fileName">Файл которых хранит настройки порта</param>
+		public ModBus(string fileName)
+		{
+			_fileName = fileName;
+			timerOut.Interval = timeOut;
+			timerOut.Tick += new EventHandler(timerOut_Tick);
+			timerCheck.Interval = 20;
+			timerCheck.Tick += new EventHandler(timerCheck_Tick);
 		}
 
 		void timerCheck_Tick(object sender, EventArgs e)
@@ -129,7 +147,7 @@ namespace ModBus
 					this.OnExchangeEnd();
 					return true;
 					break;
-			}			
+			}
 		}
 		/// <summary>
 		/// проверяем полученные данные 
@@ -195,15 +213,24 @@ namespace ModBus
 			}
 		}
 
+
+		private FormOptions _setupForm;
 		/// <summary>
 		/// Отображает диалог настройки
 		/// </summary>
 		public DialogResult OptionsShow()
 		{
-			FormOptions setup = new FormOptions();
+			if (string.IsNullOrEmpty(_fileName))
+			{
+				_setupForm = _setupForm ?? (new FormOptions());
+			}
+			else
+			{
+				_setupForm = _setupForm ?? (new FormOptions(_fileName));
+			}
 			#region Заполняю форму настройками порта
 
-			if (setup.ShowDialog() == DialogResult.OK)
+			if (_setupForm.ShowDialog() == DialogResult.OK)
 			{
 				try
 				{
@@ -223,19 +250,34 @@ namespace ModBus
 		}
 		void LoadSettingsPort()
 		{
-			serialPort.PortName = Properties.SettingsOptions.Default.comPort;
-			serialPort.BaudRate = Properties.SettingsOptions.Default.baudRate;
-			serialPort.DataBits = Properties.SettingsOptions.Default.dataBits;
-			serialPort.Parity = Properties.SettingsOptions.Default.parity;
-			serialPort.StopBits = Properties.SettingsOptions.Default.stopBits;
-			// По умолчанию Handshake = Handshake.None
-			// Но если его его не переприсвоить заново 
-			// Последовательный порт работал не стабильно
-			// Наблюдались повторы посылок по ModBus
-			// Возможно это связанно с ПО Аркадия (Виртуальный COM порт не принимал правильно настройки от Хоста)
-			serialPort.Handshake = Properties.SettingsOptions.Default.flowControl;
-			timeOut = Properties.SettingsOptions.Default.timeOut;
-			numberRepeatMax = Properties.SettingsOptions.Default.numberRepeat;
+			if (string.IsNullOrEmpty(_fileName))
+			{
+				serialPort.PortName = Properties.SettingsOptions.Default.comPort;
+				serialPort.BaudRate = Properties.SettingsOptions.Default.baudRate;
+				serialPort.DataBits = Properties.SettingsOptions.Default.dataBits;
+				serialPort.Parity = Properties.SettingsOptions.Default.parity;
+				serialPort.StopBits = Properties.SettingsOptions.Default.stopBits;
+				// По умолчанию Handshake = Handshake.None
+				// Но если его его не переприсвоить заново 
+				// Последовательный порт работал не стабильно
+				// Наблюдались повторы посылок по ModBus
+				// Возможно это связанно с ПО Аркадия (Виртуальный COM порт не принимал правильно настройки от Хоста)
+				serialPort.Handshake = Properties.SettingsOptions.Default.flowControl;
+				timeOut = Properties.SettingsOptions.Default.timeOut;
+				numberRepeatMax = Properties.SettingsOptions.Default.numberRepeat;
+			}
+			else
+			{
+				var settings = FormOptions.LoadSettings(_fileName);
+				serialPort.PortName = settings.ComPort;
+				serialPort.BaudRate = settings.BaudRate;
+				serialPort.DataBits = settings.DataBits;
+				serialPort.Parity = settings.Parity;
+				serialPort.StopBits = settings.StopBits;
+				serialPort.Handshake = settings.FlowControl;
+				timeOut = settings.TimeOut;
+				numberRepeatMax = settings.NumberRepeat;
+			}
 
 			timerOut.Interval = timeOut;
 
@@ -438,6 +480,7 @@ namespace ModBus
 
 	public enum ModBusStatus : int
 	{
+		None,
 		/// <summary>
 		/// Ошибка провышение времени ожидания ответа(посылки)
 		/// </summary>
