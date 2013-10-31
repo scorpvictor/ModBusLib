@@ -218,7 +218,7 @@ namespace ModBus
 		/// <summary>
 		/// Отображает диалог настройки
 		/// </summary>
-		public DialogResult OptionsShow()
+		public DialogResult OptionsShow(string caption)
 		{
 			if (string.IsNullOrEmpty(_fileName))
 			{
@@ -228,6 +228,7 @@ namespace ModBus
 			{
 				_setupForm = _setupForm ?? (new FormOptions(_fileName));
 			}
+			_setupForm.Text = caption;
 			#region Заполняю форму настройками порта
 
 			if (_setupForm.ShowDialog() == DialogResult.OK)
@@ -247,6 +248,13 @@ namespace ModBus
 				return DialogResult.Cancel;
 
 			#endregion
+		}
+		/// <summary>
+		/// Отображает диалог настройки
+		/// </summary>
+		public DialogResult OptionsShow()
+		{
+			return OptionsShow("Настройки");
 		}
 		void LoadSettingsPort()
 		{
