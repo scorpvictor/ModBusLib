@@ -95,8 +95,7 @@ namespace ModBus
 				{
 					eventArgument.Status = ModBusStatus.UnknowPacket;
 #if DEBUG
-					Console.Write(eventArgument.Status);
-					Console.Write(":");
+					Console.Write(string.Format("{0} {1}:", serialPort.PortName, eventArgument.Status));
 					foreach (byte b in serialPort.ReadExisting())
 					{
 						Console.Write("{0} ", b.ToString("X2"));
@@ -123,7 +122,7 @@ namespace ModBus
 				}
 
 #if DEBUG
-				Console.Write("Send:");
+				Console.Write(string.Format("{0} Send:", serialPort.PortName));
 				foreach (byte b in bufferTransmit)
 				{
 					Console.Write("{0} ", b.ToString("X2"));
@@ -170,7 +169,7 @@ namespace ModBus
 			}
 
 #if DEBUG
-			Console.Write("Receive:");
+			Console.Write(string.Format("{0} Receive:", serialPort.PortName));
 			foreach (byte b in buffer)
 			{
 				Console.Write("{0} ", b.ToString("X2"));
