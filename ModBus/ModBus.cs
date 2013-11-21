@@ -1,80 +1,115 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.IO.Ports;
 using System.Windows.Forms;
+using ModBus.Properties;
+
 
 namespace ModBus
 {
 	/// <summary>
-	/// Класс реализует протокол обмена ModBus посредством последовательного порта 
+	///     Класс реализует протокол обмена ModBus посредством последовательного порта
 	/// </summary>
 	public class ModBus
 	{
-		Timer timerOut = new Timer();
-		Timer timerCheck = new Timer();
-		SerialPort serialPort = new SerialPort();
-		/// <summary>
-		/// TimeOut в милисе6кундах
-		/// </summary>
-		private int timeOut = 300;
-		/// <summary>
-		/// Ожидание ответа от подчиненого
-		/// </summary>
-		private bool waitResponse = false;
-		/// <summary>
-		/// Ожидаемое количество байт на чтение
-		/// </summary>
-		private int bytesToRead;
-		/// <summary>
-		/// Адрес подчиненого
-		/// </summary>
-		private int addressSlave;
-		/// <summary>
-		/// Максимальное число повторов запросов при таймауте
-		/// </summary>
-		private int numberRepeatMax = 5;
 
-
-		private int counterRepeat;
+		public delegate void ExchangeEndHandle(object sender, ModBusEventArg e);
 
 		/// <summary>
-		/// Файл хранит настройки порта
+		///     Файл хранит настройки порта
 		/// </summary>
-		private string _fileName;
+		private readonly string _fileName;
+
+		private readonly SerialPort _serialPort = new SerialPort();
+		private readonly Timer _timerCheck = new Timer();
+		private readonly Timer _timerOut = new Timer();
+		private readonly ModBusEventArg _eventArgument = new ModBusEventArg();
+
+		/// <summary>
+		///     Адрес подчиненого
+		/// </summary>
+		private int _addressSlave;
+
+		/// <summary>
+		/// прочитанное кол-во байт
+		/// </summary>
+		private int _bytesRead;
+		/// <summary>
+		/// Запрошенная функция
+		/// </summary>
+		private int _requestFunction;
+		/// <summary>
+		///     Ожидаемое количество байт на чтение
+		/// </summary>
+		private int _bytesToRead;
+
+		private int _counterRepeat;
+
+		/// <summary>
+		///     Максимальное число повторов запросов при таймауте
+		/// </summary>
+		private int _numberRepeatMax = 5;
+
+		private FormOptions _setupForm;
+
+		/// <summary>
+		///     TimeOut в милисе6кундах
+		/// </summary>
+		private int _timeOut = 300;
+
+		/// <summary>
+		///     Ожидание ответа от подчиненого
+		/// </summary>
+		private bool _waitResponse;
+
+		/// <summary>
+		///     Буфер для хранения предыдущей отправленой посылки
+		///     (в случае если посылка не прошла по таймауту то повторяем запрос с содержимым данного буфера)
+		/// </summary>
+		private byte[] _bufferTransmit;
 
 		public ModBus()
 		{
-			timerOut.Interval = timeOut;
-			timerOut.Tick += new EventHandler(timerOut_Tick);
-			timerCheck.Interval = 20;
-			timerCheck.Tick += new EventHandler(timerCheck_Tick);
+			_timerOut.Interval = _timeOut;
+			_timerOut.Tick += timerOut_Tick;
+			_timerCheck.Interval = 20;
+			_timerCheck.Tick += timerCheck_Tick;
 		}
 
 		/// <summary>
-		/// 
 		/// </summary>
 		/// <param name="fileName">Файл которых хранит настройки порта</param>
 		public ModBus(string fileName)
 		{
 			_fileName = fileName;
-			timerOut.Interval = timeOut;
-			timerOut.Tick += new EventHandler(timerOut_Tick);
-			timerCheck.Interval = 20;
-			timerCheck.Tick += new EventHandler(timerCheck_Tick);
+			_timerOut.Interval = _timeOut;
+			_timerOut.Tick += timerOut_Tick;
+			_timerCheck.Interval = 20;
+			_timerCheck.Tick += timerCheck_Tick;
 		}
 
-		void timerCheck_Tick(object sender, EventArgs e)
+		private void timerCheck_Tick(object sender, EventArgs e)
 		{
 			try
 			{
-				if (bytesToRead <= serialPort.BytesToRead)
+				var count = _serialPort.BytesToRead;
+				if (_bytesRead == count && count != 0)
 				{
-					timerCheck.Stop();
-					timerOut.Stop();
+					_timerCheck.Stop();
+					_timerOut.Stop();
 					CheckData();
 				}
+				else
+				{
+					_bytesRead = _serialPort.BytesToRead;
+					_timerCheck.Reset();
+				}
+				//if (_bytesToRead <= _serialPort.BytesToRead)
+				//{
+				//	_timerCheck.Stop();
+				//	_timerOut.Stop();
+				//	CheckData();
+				//}
 			}
 			catch (InvalidOperationException exc)
 			{
@@ -83,85 +118,64 @@ namespace ModBus
 			}
 		}
 
-		void timerOut_Tick(object sender, EventArgs e)
-		{
-			counterRepeat++;
-			if (counterRepeat > numberRepeatMax)
-			{
-				timerCheck.Stop();
-				timerOut.Stop();
-				waitResponse = false;
-				if (serialPort.BytesToRead != 0)
-				{
-					eventArgument.Status = ModBusStatus.UnknowPacket;
-#if DEBUG
-					Console.Write(eventArgument.Status);
-					Console.Write(":");
-					foreach (byte b in serialPort.ReadExisting())
-					{
-						Console.Write("{0} ", b.ToString("X2"));
-					}
-					Console.WriteLine();
-#endif
-				}
-				else
-					eventArgument.Status = ModBusStatus.TimeOutError;
-				OnExchangeEnd();
-			}
-			else
-			{
-				// повторяем запрос
-				try
-				{
-					serialPort.ReadExisting();
-					serialPort.Write(bufferTransmit, 0, bufferTransmit.Length);
-				}
-				catch (InvalidOperationException exc)
-				{
-					if (CatchSerialException(exc))
-						return;
-				}
-
-#if DEBUG
-				Console.Write("Send:");
-				foreach (byte b in bufferTransmit)
-				{
-					Console.Write("{0} ", b.ToString("X2"));
-				}
-				Console.WriteLine();
-#endif
-			}
-			//throw new Exception("The method or operation is not implemented.");
-		}
 		/// <summary>
-		/// Обработка исключений порта
+		/// Проверка нужно ли повторить запрос
+		/// </summary>
+		/// <returns></returns>
+		bool CheckRepeat()
+		{
+			_counterRepeat++;
+			if (_counterRepeat < _numberRepeatMax)
+			{
+				_timerCheck.Stop();
+				_timerOut.Stop();
+				Repeat();
+				return true;
+			}
+			return false;
+		}
+
+		private void timerOut_Tick(object sender, EventArgs e)
+		{
+			if (!CheckRepeat())
+			{
+				_waitResponse = false;
+				_eventArgument.Status = ModBusStatus.TimeOutError;
+				OnExchangeEnd();
+				
+			}			
+		}
+
+		/// <summary>
+		///     Обработка исключений порта
 		/// </summary>
 		/// <param name="exc"></param>
-		bool CatchSerialException(Exception exc)
+		private bool CatchSerialException(Exception exc)
 		{
 			switch (exc.TargetSite.DeclaringType.Name)
 			{
 				default:
 				case "SerialPort":
-					timerCheck.Stop();
-					timerOut.Stop();
-					waitResponse = false;
-					eventArgument.Status = ModBusStatus.PortIsClosed;
-					this.OnExchangeEnd();
+					_timerCheck.Stop();
+					_timerOut.Stop();
+					_waitResponse = false;
+					_eventArgument.Status = ModBusStatus.PortIsClosed;
+					OnExchangeEnd();
 					return true;
 					break;
 			}
 		}
+
 		/// <summary>
-		/// проверяем полученные данные 
+		///     проверяем полученные данные
 		/// </summary>
 		private void CheckData()
 		{
 			byte[] buffer = null;
 			try
 			{
-				buffer = new byte[serialPort.BytesToRead];
-				serialPort.Read(buffer, 0, buffer.Length);
+				buffer = new byte[_serialPort.BytesToRead];
+				_serialPort.Read(buffer, 0, buffer.Length);
 			}
 			catch (InvalidOperationException exc)
 			{
@@ -177,32 +191,63 @@ namespace ModBus
 			}
 			Console.WriteLine();
 #endif
-			waitResponse = false;
-			if (!CRC.CheckCRC(buffer, 0, buffer.Length - 2, buffer, buffer.Length - 2))
+			_waitResponse = false;
+			if (buffer.Length < 5)
 			{
-				eventArgument.Status = ModBusStatus.CRCError;
+				if (CheckRepeat())
+					return;
+				_eventArgument.Status = ModBusStatus.UnknowPacket;
+				OnExchangeEnd();
+			}
+			var function = buffer[1] & ~0x80;
+			var error = (buffer[1] & 0x80) == 0x10;
+			if (_requestFunction != function)
+			{
+				if (CheckRepeat())
+					return;
+				_eventArgument.Status = ModBusStatus.InvalidFunction;
 				OnExchangeEnd();
 				return;
 			}
-			if (buffer[0] != addressSlave)
+			if (!CRC.CheckCRC(buffer, 0, buffer.Length - 2, buffer, buffer.Length - 2))
 			{
-				eventArgument.Status = ModBusStatus.AddressSlaveError;
+				if (CheckRepeat())
+					return;
+
+				_eventArgument.Status = ModBusStatus.CRCError;
+				OnExchangeEnd();
+				return;
+			}
+			if (buffer[0] != _addressSlave)
+			{
+				if (CheckRepeat())
+					return;
+				_eventArgument.Status = ModBusStatus.AddressSlaveError;
+				OnExchangeEnd();
+				return;
+			}
+
+			if (error)
+			{
+				_eventArgument.Status = ModBusStatus.FunctionError;
+				_eventArgument.Function = buffer[1];
+				_eventArgument.data = new short[] { buffer[2] };
 				OnExchangeEnd();
 				return;
 			}
 			// Определяем тип функции
-			switch (buffer[1])
+			switch (function)
 			{
 				// Read Holding Registers
 				case 3:
-					eventArgument.data = new short[buffer[2] / 2];
-					eventArgument.Status = ModBusStatus.ReadHoldingRegistersOK;
+					_eventArgument.data = new short[buffer[2] / 2];
+					_eventArgument.Status = ModBusStatus.ReadHoldingRegistersOK;
 
 					int i = 0;
-					while (i != eventArgument.data.Length)
+					while (i != _eventArgument.data.Length)
 					{
-						eventArgument.data[i] = (short)(buffer[i * 2 + 3] << 8);
-						eventArgument.data[i] += buffer[i * 2 + 1 + 3];
+						_eventArgument.data[i] = (short)(buffer[i * 2 + 3] << 8);
+						_eventArgument.data[i] += buffer[i * 2 + 1 + 3];
 						i++;
 					}
 					OnExchangeEnd();
@@ -210,17 +255,28 @@ namespace ModBus
 
 				// Preset Multiple Registers
 				case 0x10:
-					eventArgument.data = new short[0];
-					eventArgument.Status = ModBusStatus.PresetMultipleRegistersOK;
+					_eventArgument.data = new short[0];
+					_eventArgument.Status = ModBusStatus.PresetMultipleRegistersOK;
+					OnExchangeEnd();
+					break;
+				default:
+					_eventArgument.data = new short[buffer[2] / 2];
+					_eventArgument.Status = ModBusStatus.CustomFunctionOk;
+					i = 0;
+					while (i != _eventArgument.data.Length)
+					{
+						_eventArgument.data[i] = (short)(buffer[i * 2 + 3] << 8);
+						_eventArgument.data[i] += buffer[i * 2 + 1 + 3];
+						i++;
+					}
 					OnExchangeEnd();
 					break;
 			}
 		}
 
 
-		private FormOptions _setupForm;
 		/// <summary>
-		/// Отображает диалог настройки
+		///     Отображает диалог настройки
 		/// </summary>
 		public DialogResult OptionsShow()
 		{
@@ -232,6 +288,7 @@ namespace ModBus
 			{
 				_setupForm = _setupForm ?? (new FormOptions(_fileName));
 			}
+
 			#region Заполняю форму настройками порта
 
 			if (_setupForm.ShowDialog() == DialogResult.OK)
@@ -242,7 +299,7 @@ namespace ModBus
 				}
 				catch
 				{
-					if (serialPort.IsOpen)
+					if (_serialPort.IsOpen)
 						MessageBox.Show("Порт уже открыт", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 				}
 				return DialogResult.OK;
@@ -252,92 +309,104 @@ namespace ModBus
 
 			#endregion
 		}
-		void LoadSettingsPort()
+
+		private void LoadSettingsPort()
 		{
 			if (string.IsNullOrEmpty(_fileName))
 			{
-				serialPort.PortName = Properties.SettingsOptions.Default.comPort;
-				serialPort.BaudRate = Properties.SettingsOptions.Default.baudRate;
-				serialPort.DataBits = Properties.SettingsOptions.Default.dataBits;
-				serialPort.Parity = Properties.SettingsOptions.Default.parity;
-				serialPort.StopBits = Properties.SettingsOptions.Default.stopBits;
+				_serialPort.PortName = SettingsOptions.Default.comPort;
+				_serialPort.BaudRate = SettingsOptions.Default.baudRate;
+				_serialPort.DataBits = SettingsOptions.Default.dataBits;
+				_serialPort.Parity = SettingsOptions.Default.parity;
+				_serialPort.StopBits = SettingsOptions.Default.stopBits;
 				// По умолчанию Handshake = Handshake.None
 				// Но если его его не переприсвоить заново 
 				// Последовательный порт работал не стабильно
 				// Наблюдались повторы посылок по ModBus
 				// Возможно это связанно с ПО Аркадия (Виртуальный COM порт не принимал правильно настройки от Хоста)
-				serialPort.Handshake = Properties.SettingsOptions.Default.flowControl;
-				timeOut = Properties.SettingsOptions.Default.timeOut;
-				numberRepeatMax = Properties.SettingsOptions.Default.numberRepeat;
+				_serialPort.Handshake = SettingsOptions.Default.flowControl;
+				_timeOut = SettingsOptions.Default.timeOut;
+				_numberRepeatMax = SettingsOptions.Default.numberRepeat;
 			}
 			else
 			{
-				var settings = FormOptions.LoadSettings(_fileName);
-				serialPort.PortName = settings.ComPort;
-				serialPort.BaudRate = settings.BaudRate;
-				serialPort.DataBits = settings.DataBits;
-				serialPort.Parity = settings.Parity;
-				serialPort.StopBits = settings.StopBits;
-				serialPort.Handshake = settings.FlowControl;
-				timeOut = settings.TimeOut;
-				numberRepeatMax = settings.NumberRepeat;
+				CustomSettings settings = FormOptions.LoadSettings(_fileName);
+				_serialPort.PortName = settings.ComPort;
+				_serialPort.BaudRate = settings.BaudRate;
+				_serialPort.DataBits = settings.DataBits;
+				_serialPort.Parity = settings.Parity;
+				_serialPort.StopBits = settings.StopBits;
+				_serialPort.Handshake = settings.FlowControl;
+				_timeOut = settings.TimeOut;
+				_numberRepeatMax = settings.NumberRepeat;
 			}
 
-			timerOut.Interval = timeOut;
-
+			_timerOut.Interval = _timeOut;
 		}
-		/// <summary>
-		/// Буфер для хранения предыдущей отправленой посылки
-		/// (в случае если посылка не прошла по таймауту то повторяем запрос с содержимым данного буфера)
-		/// </summary>
-		private byte[] bufferTransmit;
 
 		/// <summary>
-		/// запрос на чтение двоичного содержания регистров подчиненого
+		///     запрос на чтение двоичного содержания регистров подчиненого
 		/// </summary>
 		/// <param name="address">Адрес подчиненого</param>
 		/// <param name="regAddress">начальный адрес регистров</param>
 		/// <param name="numberReg">количество регистров </param>
 		public void ReadHoldingRegisters(byte address, short regAddress, short numberReg)
 		{
-			if (!waitResponse)
+			if (!_waitResponse)
 			{
 				// очищаем буфер приемный
 				//serialPort.Read(new byte[serialPort.BytesToRead], 0, serialPort.BytesToRead);
 				int i = 0;
-				bufferTransmit = new byte[8];
-				addressSlave = address;
-				bufferTransmit[i++] = address;
-				bufferTransmit[i++] = 0x03;
-				bufferTransmit[i++] = (byte)(regAddress >> 8);
-				bufferTransmit[i++] = (byte)(regAddress);
+				_bufferTransmit = new byte[8];
+				_addressSlave = address;
+				_bufferTransmit[i++] = address;
+				_bufferTransmit[i++] = 0x03;
+				_bufferTransmit[i++] = (byte)(regAddress >> 8);
+				_bufferTransmit[i++] = (byte)(regAddress);
 
-				bufferTransmit[i++] = (byte)(numberReg >> 8);
-				bufferTransmit[i++] = (byte)(numberReg);
+				_bufferTransmit[i++] = (byte)(numberReg >> 8);
+				_bufferTransmit[i++] = (byte)(numberReg);
 
-				bufferTransmit[i++] = (byte)CRC.GetCRC(bufferTransmit, 6);
-				bufferTransmit[i] = (byte)(CRC.GetCRC(bufferTransmit, 6) >> 8);
+				_bufferTransmit[i++] = (byte)CRC.GetCRC(_bufferTransmit, 6);
+				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, 6) >> 8);
 
+				_requestFunction = 3;
 				Repeat();
-				//counterRepeat = 0;
-				//serialPort.Write(bufferTransmit, 0, bufferTransmit.Length);
-
-				//waitResponse = true;
-				//timerOut.Start();
-				//timerCheck.Start();
-
-				// ожидаем количество байт в ответе 
-				bytesToRead = 5 + numberReg * 2;
 			}
 			else
 				throw new BusyException();
-
 		}
 
-
-
 		/// <summary>
-		/// Запрос на запись двоичного содержания регистров подчиненого
+		/// 
+		/// </summary>
+		/// <param name="address">адрес подчиненого</param>
+		/// <param name="function">запрашиваемая функция</param>
+		/// <param name="data">передаваемые данные</param>
+		public void RequestCustomFunction(byte address, byte function, byte[] data)
+		{
+			if (!_waitResponse)
+			{
+				int i = 0;
+				_bufferTransmit = new byte[data.Length + 4];
+				_addressSlave = address;
+				_bufferTransmit[i++] = address;
+				_bufferTransmit[i++] = function;
+
+				foreach (byte b in data)
+					_bufferTransmit[i++] = b;
+			
+				_bufferTransmit[i++] = (byte)CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2);
+				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2) >> 8);
+
+				_requestFunction = function;			
+				Repeat();
+			}
+			else
+				throw new BusyException();
+		}
+		/// <summary>
+		///     Запрос на запись двоичного содержания регистров подчиненого
 		/// </summary>
 		/// <param name="address">дрес подчиненого</param>
 		/// <param name="regAddress">начальный адрес регистров</param>
@@ -345,67 +414,53 @@ namespace ModBus
 		/// <param name="numberReg">количество регистров</param>
 		public void PresetMultipleRegisters(byte address, short regAddress, short[] data, short numberReg)
 		{
-			if (!waitResponse)
+			if (!_waitResponse)
 			{
 				int i = 0;
-				bufferTransmit = new byte[numberReg * 2 + 9];
-				addressSlave = address;
-				bufferTransmit[i++] = address;
-				bufferTransmit[i++] = 0x10;
-				bufferTransmit[i++] = (byte)(regAddress >> 8);
-				bufferTransmit[i++] = (byte)(regAddress);
+				_bufferTransmit = new byte[numberReg * 2 + 9];
+				_addressSlave = address;
+				_bufferTransmit[i++] = address;
+				_bufferTransmit[i++] = 0x10;
+				_bufferTransmit[i++] = (byte)(regAddress >> 8);
+				_bufferTransmit[i++] = (byte)(regAddress);
 
-				bufferTransmit[i++] = (byte)(numberReg >> 8);
-				bufferTransmit[i++] = (byte)(numberReg);
+				_bufferTransmit[i++] = (byte)(numberReg >> 8);
+				_bufferTransmit[i++] = (byte)(numberReg);
 
-				bufferTransmit[i++] = (byte)(numberReg * 2);
+				_bufferTransmit[i++] = (byte)(numberReg * 2);
 
 
 				int index = 0;
 				while (index != numberReg)
 				{
-					bufferTransmit[i++] = (byte)(data[index] >> 8);
-					bufferTransmit[i++] = (byte)(data[index++]);
+					_bufferTransmit[i++] = (byte)(data[index] >> 8);
+					_bufferTransmit[i++] = (byte)(data[index++]);
 				}
-				//Array.Copy(data, 0, buffer, i, numberReg * 2);
-				//i += numberReg * 2;
 
-				bufferTransmit[i++] = (byte)CRC.GetCRC(bufferTransmit, bufferTransmit.Length - 2);
-				bufferTransmit[i] = (byte)(CRC.GetCRC(bufferTransmit, bufferTransmit.Length - 2) >> 8);
+				_bufferTransmit[i++] = (byte)CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2);
+				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2) >> 8);
 
-				Repeat();
-				//counterRepeat = 0;
-				//serialPort.Write(bufferTransmit, 0, bufferTransmit.Length);
-
-				//waitResponse = true;
-				//timerOut.Start();
-				//timerCheck.Start();
-
-				// ожидаем количество байт в ответе 
-				bytesToRead = 8;
+				_requestFunction = 0x10;
+				Repeat();							
 			}
 			else
 				throw new BusyException();
-
-			//serialPort.DtrEnable = true;
-			//serialPort.RtsEnable = true;
-			//serialPort.
-
 		}
 
 		/// <summary>
-		/// Повтор посылки последней
+		///     Повтор посылки последней
 		/// </summary>
 		public void Repeat()
 		{
-			if (!waitResponse)
+			if (!_waitResponse)
 			{
 				// очищаем буфер приемный
 				try
 				{
-					serialPort.Read(new byte[serialPort.BytesToRead], 0, serialPort.BytesToRead);
-					counterRepeat = 0;
-					serialPort.Write(bufferTransmit, 0, bufferTransmit.Length);
+					_bytesRead = int.MaxValue;
+					_serialPort.DiscardInBuffer();					
+					_counterRepeat = 0;
+					_serialPort.Write(_bufferTransmit, 0, _bufferTransmit.Length);
 				}
 				catch (InvalidOperationException exc)
 				{
@@ -419,19 +474,20 @@ namespace ModBus
 				}
 #if DEBUG
 				Console.Write("Send:");
-				foreach (byte b in bufferTransmit)
+				foreach (byte b in _bufferTransmit)
 				{
 					Console.Write("{0} ", b.ToString("X2"));
 				}
 				Console.WriteLine();
 #endif
-				waitResponse = true;
-				timerOut.Start();
-				timerCheck.Start();
+				_waitResponse = true;
+				_timerOut.Start();
+				_timerCheck.Start();
 			}
 		}
+
 		/// <summary>
-		/// Открывает порт
+		///     Открывает порт
 		/// </summary>
 		/// <returns>false - порт не открылся</returns>
 		public bool OpenPort()
@@ -439,17 +495,17 @@ namespace ModBus
 			bool result = true;
 			try
 			{
-				if (!serialPort.IsOpen)
+				if (!_serialPort.IsOpen)
 				{
 					LoadSettingsPort();
-					serialPort.Open();
-					eventArgument.Status = ModBusStatus.PortOk;
+					_serialPort.Open();
+					_eventArgument.Status = ModBusStatus.PortOk;
 					OnExchangeEnd();
 				}
 			}
 			catch
 			{
-				eventArgument.Status = ModBusStatus.BusyPort;
+				_eventArgument.Status = ModBusStatus.BusyPort;
 				OnExchangeEnd();
 				result = false;
 			}
@@ -458,117 +514,133 @@ namespace ModBus
 
 		public void ClosePort()
 		{
-			counterRepeat = 0;
-			waitResponse = false;
-			timerOut.Stop();
-			timerCheck.Stop();
-			if (serialPort.IsOpen)
-				serialPort.Close();
+			_counterRepeat = 0;
+			_waitResponse = false;
+			_timerOut.Stop();
+			_timerCheck.Stop();
+			if (_serialPort.IsOpen)
+				_serialPort.Close();
 		}
-		public delegate void ExchangeEndHandle(object sender, ModBusEventArg e);
+
 		public event ExchangeEndHandle ExchangeEnd;
-		ModBusEventArg eventArgument = new ModBusEventArg();
+
 		private void OnExchangeEnd()
 		{
 			// Если не ссылается на NULL то вызываем событие
 			if (ExchangeEnd != null)
 			{
-
-				ExchangeEnd(this, eventArgument);
+				ExchangeEnd(this, _eventArgument);
 			}
 		}
-
 	}
 
 
-
-
-	public enum ModBusStatus : int
+	public enum ModBusStatus
 	{
 		None,
+
 		/// <summary>
-		/// Ошибка провышение времени ожидания ответа(посылки)
+		///     Ошибка провышение времени ожидания ответа(посылки)
 		/// </summary>
 		TimeOutError,
+
 		/// <summary>
-		/// Получены не известные данные
+		///     Получены неизвестные данные
 		/// </summary>
 		UnknowPacket,
 		/// <summary>
-		/// Ошибка подчиненого 
+		/// Принята неверная функция
+		/// </summary>
+		InvalidFunction,
+		/// <summary>
+		/// Запрос функции вернул ошибку
+		/// </summary>
+		FunctionError,
+		/// <summary>
+		///     Ошибка подчиненого
 		/// </summary>
 		AddressSlaveError,
+
 		/// <summary>
-		/// Ошибка контрольной суммы
+		///     Ошибка контрольной суммы
 		/// </summary>
 		CRCError,
+
 		/// <summary>
-		/// Данные прочитаны успешно
+		///     Данные прочитаны успешно
 		/// </summary>
 		ReadPacketOK,
+
 		/// <summary>
-		/// Данные записаны успешно
+		///     Данные записаны успешно
 		/// </summary>
 		WritePacketOK,
+
 		/// <summary>
-		/// Занято процессом чтения данных
+		///     Занято процессом чтения данных
 		/// </summary>
 		BusyRead,
+
 		/// <summary>
-		/// Занято процессом записи данных
+		///     Занято процессом записи данных
 		/// </summary>
 		BusyWrite,
+
 		/// <summary>
-		/// Запрос регистров успешно завершен (команда 3) 
+		///     Запрос регистров успешно завершен (команда 3)
 		/// </summary>
 		ReadHoldingRegistersOK,
+
 		/// <summary>
-		/// Порт занят
+		///     Порт занят
 		/// </summary>
 		BusyPort,
+
 		/// <summary>
-		/// Порт закрыт
+		///     Порт закрыт
 		/// </summary>
 		PortIsClosed,
 		PortOk,
-		// Записьрегистров успешна (команда 0x10)
+		// Запись регистров успешна (команда 0x10)
 		PresetMultipleRegistersOK,
+		/// <summary>
+		/// Пользовательская функция верна
+		/// </summary>
+		CustomFunctionOk,
 	}
 
 	/// <summary>
-	/// Аргумент события ModBus
+	///     Аргумент события ModBus
 	/// </summary>
 	public class ModBusEventArg : EventArgs
 	{
-		private ModBusStatus status = 0;
 		internal short[] data;
+		private ModBusStatus status = 0;
+		public int Function { get; set; }
 		public short[] Data
 		{
 			get { return data; }
 		}
+
 		public ModBusStatus Status
 		{
-			get
-			{
-				return status;
-			}
-			internal set
-			{
-				status = value;
-			}
+			get { return status; }
+			internal set { status = value; }
 		}
 	}
 
 	#region Исключительные ситуации
+
 	/// <summary>
-	/// Занят  ожиданием ответа от подчиненого
+	///     Занят  ожиданием ответа от подчиненого
 	/// </summary>
 	[Serializable]
 	public class BusyException : Exception
 	{
 		public BusyException()
-			: base("Ожидание ответа от подчиненого") { }
-
+			: base("Ожидание ответа от подчиненого")
+		{
+		}
 	}
 
 	#endregion
@@ -579,6 +651,7 @@ namespace ModBus
 		{
 			return GetCRC(buf, buf.Length);
 		}
+
 		public static ushort GetCRC(byte[] buf, int buf_size)
 		{
 			ushort crc16mb_prev, index = 0;
@@ -586,11 +659,10 @@ namespace ModBus
 
 			while (buf_size != 0)
 			{
-
 				crc16mb_prev ^= buf[index];
 				for (byte uc1 = 8; uc1 != 0; uc1--)
 				{
-					byte uc2 = (byte)(crc16mb_prev & 0x0001);
+					var uc2 = (byte)(crc16mb_prev & 0x0001);
 					crc16mb_prev >>= 1;
 					if (uc2 == 1)
 						crc16mb_prev ^= 0xA001;
@@ -609,11 +681,10 @@ namespace ModBus
 
 			while (contByte != 0)
 			{
-
 				crc16mb_prev ^= buf[index];
 				for (byte uc1 = 8; uc1 != 0; uc1--)
 				{
-					byte uc2 = (byte)(crc16mb_prev & 0x0001);
+					var uc2 = (byte)(crc16mb_prev & 0x0001);
 					crc16mb_prev >>= 1;
 					if (uc2 == 1)
 						crc16mb_prev ^= 0xA001;
@@ -623,8 +694,9 @@ namespace ModBus
 			}
 			return (crc16mb_prev);
 		}
+
 		/// <summary>
-		/// Проверяет CRC в посылке
+		///     Проверяет CRC в посылке
 		/// </summary>
 		/// <param name="buf">массив данных</param>
 		/// <param name="beginIndex">начальный индекс в массиве</param>
@@ -645,65 +717,82 @@ namespace ModBus
 	}
 
 	/// <summary>
-	/// Атрибуты регистра
+	///     Атрибуты регистра
 	/// </summary>
 	public enum RegisterAtr
 	{
 		/// <summary>
-		/// Доступ на чтение запись
+		///     Доступ на чтение запись
 		/// </summary>
 		ReadWrite,
+
 		/// <summary>
-		/// Доступ на чтение
+		///     Доступ на чтение
 		/// </summary>
 		Read,
+
 		/// <summary>
-		/// Доступ на запись
+		///     Доступ на запись
 		/// </summary>
 		Write
 	}
+
 	/// <summary>
-	/// Описывает регистр ModBus
+	///     Описывает регистр ModBus
 	/// </summary>
 	[Serializable]
 	public class Register
 	{
 		/// <summary>
-		/// Адрес регистра
+		///     Адрес регистра
 		/// </summary>
-		private ushort _address = 0;
+		private ushort _address;
+
 		/// <summary>
-		/// Количество регистров
+		///     Атрибут регистра
 		/// </summary>
-		private int _length = 0;
+		private RegisterAtr _attribute = RegisterAtr.Read;
+
+		/// <summary>
+		///     Количество регистров
+		/// </summary>
+		private int _length;
 
 		public int Length
 		{
 			get { return _length; }
 			set { _length = value; }
 		}
-		/// <summary>
-		/// Атрибут регистра
-		/// </summary>
-		private RegisterAtr _attribute = RegisterAtr.Read;
 
 		/// <summary>
-		/// Адрес регистра
+		///     Адрес регистра
 		/// </summary>
 		public ushort Address
 		{
-			get { return this._address; }
-			set { this._address = value; }
+			get { return _address; }
+			set { _address = value; }
 		}
 
 		/// <summary>
-		/// Атрибут регистра
+		///     Атрибут регистра
 		/// </summary>
 		public RegisterAtr Attribute
 		{
-			get { return this._attribute; }
-			set { this._attribute = value; }
+			get { return _attribute; }
+			set { _attribute = value; }
+		}
+	}
+	public static class TimerExtension
+	{
+		public static void Reset(this Timer timer)
+		{
+			timer.Stop();
+			timer.Start();
 		}
 	}
 
 }
+
+
+
+
