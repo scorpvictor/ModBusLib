@@ -184,7 +184,7 @@ namespace ModBus
 			}
 
 #if DEBUG
-			Console.Write("Receive:");
+			Console.Write(string.Format("{0} Receive:", _serialPort.PortName));
 			foreach (byte b in buffer)
 			{
 				Console.Write("{0} ", b.ToString("X2"));
@@ -278,7 +278,7 @@ namespace ModBus
 		/// <summary>
 		///     Отображает диалог настройки
 		/// </summary>
-		public DialogResult OptionsShow()
+		public DialogResult OptionsShow(string caption)
 		{
 			if (string.IsNullOrEmpty(_fileName))
 			{
@@ -288,7 +288,7 @@ namespace ModBus
 			{
 				_setupForm = _setupForm ?? (new FormOptions(_fileName));
 			}
-
+			_setupForm.Text = caption;
 			#region Заполняю форму настройками порта
 
 			if (_setupForm.ShowDialog() == DialogResult.OK)
@@ -309,8 +309,14 @@ namespace ModBus
 
 			#endregion
 		}
-
-		private void LoadSettingsPort()
+		/// <summary>
+		/// Отображает диалог настройки
+		/// </summary>
+		public DialogResult OptionsShow()
+		{
+			return OptionsShow("Настройки");
+		}
+		void LoadSettingsPort()
 		{
 			if (string.IsNullOrEmpty(_fileName))
 			{
