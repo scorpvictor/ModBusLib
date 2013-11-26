@@ -103,13 +103,8 @@ namespace ModBus
 				{
 					_bytesRead = _serialPort.BytesToRead;
 					_timerCheck.Reset();
+					_timerOut.Reset();
 				}
-				//if (_bytesToRead <= _serialPort.BytesToRead)
-				//{
-				//	_timerCheck.Stop();
-				//	_timerOut.Stop();
-				//	CheckData();
-				//}
 			}
 			catch (InvalidOperationException exc)
 			{
