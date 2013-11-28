@@ -98,8 +98,9 @@ namespace ModBus
 					_timerCheck.Stop();
 					_timerOut.Stop();
 					CheckData();
+					return;
 				}
-				else
+				if (_bytesRead != count)
 				{
 					_bytesRead = _serialPort.BytesToRead;
 					_timerCheck.Reset();
@@ -137,8 +138,8 @@ namespace ModBus
 				_waitResponse = false;
 				_eventArgument.Status = ModBusStatus.TimeOutError;
 				OnExchangeEnd();
-				
-			}			
+
+			}
 		}
 
 		/// <summary>
@@ -195,7 +196,7 @@ namespace ModBus
 				OnExchangeEnd();
 			}
 			var function = buffer[1] & ~0x80;
-			var error = (buffer[1] & 0x80) == 0x10;
+			var error = (buffer[1] & 0x80) == 0x80;
 			if (_requestFunction != function)
 			{
 				if (CheckRepeat())
@@ -230,6 +231,7 @@ namespace ModBus
 				OnExchangeEnd();
 				return;
 			}
+			_eventArgument.Function = buffer[1];
 			// Определяем тип функции
 			switch (function)
 			{
@@ -389,18 +391,20 @@ namespace ModBus
 			if (!_waitResponse)
 			{
 				int i = 0;
-				_bufferTransmit = new byte[data.Length + 4];
+				_bufferTransmit = new byte[(data == null ? 0 : data.Length) + 5];
 				_addressSlave = address;
 				_bufferTransmit[i++] = address;
 				_bufferTransmit[i++] = function;
+				_bufferTransmit[i++] = data == null ? (byte)0 : (byte)data.Length;
 
-				foreach (byte b in data)
-					_bufferTransmit[i++] = b;
-			
+				if (data != null)
+					foreach (byte b in data)
+						_bufferTransmit[i++] = b;
+
 				_bufferTransmit[i++] = (byte)CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2);
 				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2) >> 8);
 
-				_requestFunction = function;			
+				_requestFunction = function;
 				Repeat();
 			}
 			else
@@ -442,7 +446,7 @@ namespace ModBus
 				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2) >> 8);
 
 				_requestFunction = 0x10;
-				Repeat();							
+				Repeat();
 			}
 			else
 				throw new BusyException();
@@ -459,7 +463,7 @@ namespace ModBus
 				try
 				{
 					_bytesRead = int.MaxValue;
-					_serialPort.DiscardInBuffer();					
+					_serialPort.DiscardInBuffer();
 					_counterRepeat = 0;
 					_serialPort.Write(_bufferTransmit, 0, _bufferTransmit.Length);
 				}
