@@ -194,6 +194,7 @@ namespace ModBus
 					return;
 				_eventArgument.Status = ModBusStatus.UnknowPacket;
 				OnExchangeEnd();
+				return;
 			}
 			var function = buffer[1] & ~0x80;
 			var error = (buffer[1] & 0x80) == 0x80;
