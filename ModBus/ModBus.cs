@@ -96,7 +96,14 @@ namespace Butek.ModBus
 
 		#endregion
 
+		#region Properties
 
+		public string PortName
+		{
+			get { return _serialPort.PortName; }
+		}
+
+		#endregion
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
 			try

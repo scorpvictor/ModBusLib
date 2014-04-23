@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModBus", "ModBus\ModBus.csproj", "{780C96CC-342A-4168-A075-36C089DF7AB2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Butek.ModBus", "ModBus\Butek.ModBus.csproj", "{780C96CC-342A-4168-A075-36C089DF7AB2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

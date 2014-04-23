@@ -8,8 +8,8 @@
     <ProjectGuid>{780C96CC-342A-4168-A075-36C089DF7AB2}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ModBus</RootNamespace>
-    <AssemblyName>ModBus</AssemblyName>
+    <RootNamespace>Butek.ModBus</RootNamespace>
+    <AssemblyName>Butek.ModBus</AssemblyName>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
@@ -50,7 +50,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\ModBus.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\Butek.ModBus.xml</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
