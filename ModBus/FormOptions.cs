@@ -6,9 +6,9 @@ using System.Text;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Serialization;
-using ModBus.Properties;
+using Butek.ModBus.Properties;
 
-namespace ModBus
+namespace Butek.ModBus
 {
 	public partial class FormOptions : Form
 	{

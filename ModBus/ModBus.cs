@@ -2,19 +2,18 @@
 using System.IO;
 using System.IO.Ports;
 using System.Windows.Forms;
-using ModBus.Properties;
+using Butek.ModBus.Properties;
 
 
-namespace ModBus
+namespace Butek.ModBus
 {
 	/// <summary>
 	///     Класс реализует протокол обмена ModBus посредством последовательного порта
 	/// </summary>
 	public class ModBus
 	{
-
-		public delegate void ExchangeEndHandle(object sender, ModBusEventArg e);
-
+		#region Fields
+		readonly PacketDetectedEventArg _packetDetectedArgument = new PacketDetectedEventArg();
 		/// <summary>
 		///     Файл хранит настройки порта
 		/// </summary>
@@ -34,10 +33,12 @@ namespace ModBus
 		/// прочитанное кол-во байт
 		/// </summary>
 		private int _bytesRead;
+
 		/// <summary>
 		/// Запрошенная функция
 		/// </summary>
 		private int _requestFunction;
+
 		/// <summary>
 		///     Ожидаемое количество байт на чтение
 		/// </summary>
@@ -68,6 +69,11 @@ namespace ModBus
 		/// </summary>
 		private byte[] _bufferTransmit;
 
+		#endregion
+
+
+		#region Constructors
+
 		public ModBus()
 		{
 			_timerOut.Interval = _timeOut;
@@ -87,6 +93,9 @@ namespace ModBus
 			_timerCheck.Interval = 20;
 			_timerCheck.Tick += timerCheck_Tick;
 		}
+
+		#endregion
+
 
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
@@ -187,6 +196,10 @@ namespace ModBus
 			}
 			Console.WriteLine();
 #endif
+			_packetDetectedArgument.Data = buffer;
+			_packetDetectedArgument.IsRecieved = true;
+			OnPacketDetected();
+
 			_waitResponse = false;
 			if (buffer.Length < 5)
 			{
@@ -486,6 +499,10 @@ namespace ModBus
 				}
 				Console.WriteLine();
 #endif
+				_packetDetectedArgument.Data = _bufferTransmit;
+				_packetDetectedArgument.IsTransmitted = true;
+				OnPacketDetected();
+
 				_waitResponse = true;
 				_timerOut.Start();
 				_timerCheck.Start();
@@ -528,8 +545,24 @@ namespace ModBus
 				_serialPort.Close();
 		}
 
-		public event ExchangeEndHandle ExchangeEnd;
 
+
+		#region Events
+
+		public delegate void PacketDetectedHandle(object sender, PacketDetectedEventArg e);
+		public event PacketDetectedHandle PacketDetected;
+		private void OnPacketDetected()
+		{
+			// Если не ссылается на NULL то вызываем событие
+			if (PacketDetected != null)
+			{
+				_packetDetectedArgument.Date = DateTime.Now;
+				PacketDetected(this, _packetDetectedArgument);
+			}
+		}
+
+		public event ExchangeEndHandle ExchangeEnd;
+		public delegate void ExchangeEndHandle(object sender, ModBusEventArg e);
 		private void OnExchangeEnd()
 		{
 			// Если не ссылается на NULL то вызываем событие
@@ -538,6 +571,9 @@ namespace ModBus
 				ExchangeEnd(this, _eventArgument);
 			}
 		}
+
+		#endregion
+
 	}
 
 
@@ -613,6 +649,47 @@ namespace ModBus
 		/// Пользовательская функция верна
 		/// </summary>
 		CustomFunctionOk,
+	}
+
+	public class PacketDetectedEventArg : EventArgs
+	{
+		#region Fields
+
+		private bool _flag;
+		private byte[] _data;
+		private DateTime _date;
+
+		#endregion
+
+
+		#region Properties
+
+		public bool IsRecieved
+		{
+			get { return !_flag; }
+			internal set { _flag = !value; }
+		}
+
+		public bool IsTransmitted
+		{
+			get { return _flag; }
+			internal set { _flag = value; }
+		}
+
+		public byte[] Data
+		{
+			get { return _data; }
+			internal set { _data = value; }
+		}
+
+		public DateTime Date
+		{
+			get { return _date; }
+			internal set { _date = value; }
+		}
+
+		#endregion
+
 	}
 
 	/// <summary>

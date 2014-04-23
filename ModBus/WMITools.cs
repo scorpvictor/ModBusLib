@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Management;
 
-namespace ModBus
+namespace Butek.ModBus
 {
 	public static class WMITools
 	{

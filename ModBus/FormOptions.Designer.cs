@@ -1,4 +1,4 @@
-namespace ModBus
+namespace Butek.ModBus
 {
 	partial class FormOptions
 	{
@@ -186,7 +186,7 @@ namespace ModBus
 			// 
 			this.RefreshButton.FlatAppearance.BorderSize = 0;
 			this.RefreshButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-			this.RefreshButton.Image = global::ModBus.Properties.Resources.Update;
+			this.RefreshButton.Image = global::Butek.ModBus.Properties.Resources.Update;
 			this.RefreshButton.Location = new System.Drawing.Point(207, 11);
 			this.RefreshButton.Margin = new System.Windows.Forms.Padding(1);
 			this.RefreshButton.Name = "RefreshButton";

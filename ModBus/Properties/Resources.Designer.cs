@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ModBus.Properties {
+namespace Butek.ModBus.Properties {
     using System;
     
     
