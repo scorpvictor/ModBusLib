@@ -136,11 +136,11 @@ namespace Butek.ModBus
 		/// <returns></returns>
 		bool CheckRepeat()
 		{
+			_timerCheck.Stop();
+			_timerOut.Stop();
 			_counterRepeat++;
 			if (_counterRepeat < _numberRepeatMax)
-			{
-				_timerCheck.Stop();
-				_timerOut.Stop();
+			{				
 				Repeat();
 				return true;
 			}
@@ -154,7 +154,6 @@ namespace Butek.ModBus
 				_waitResponse = false;
 				_eventArgument.Status = ModBusStatus.TimeOutError;
 				OnExchangeEnd();
-
 			}
 		}
 
