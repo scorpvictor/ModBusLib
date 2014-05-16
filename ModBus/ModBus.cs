@@ -69,6 +69,19 @@ namespace Butek.ModBus
 		/// </summary>
 		private byte[] _bufferTransmit;
 
+		/// <summary>
+		/// Счетчик посланых пакетов
+		/// </summary>
+		private int _sendCounter;
+		/// <summary>
+		/// Счетчик полученых пакетов
+		/// </summary>
+		private int _recieveCounter;
+		/// <summary>
+		/// Счетчик ошибочных пакетов
+		/// </summary>
+		private int _errorCounter;
+
 		#endregion
 
 
@@ -102,8 +115,52 @@ namespace Butek.ModBus
 		{
 			get { return _serialPort.PortName; }
 		}
+		public int PortBaudrate
+		{
+			get { return _serialPort.BaudRate; }
+		}
+		public int PortDataBits
+		{
+			get { return _serialPort.DataBits; }
+		}
+		public StopBits PortStopBits
+		{
+			get { return _serialPort.StopBits; }
+		}
+		public Parity PortParity
+		{
+			get { return _serialPort.Parity; }
+		}
+
+		/// <summary>
+		/// Счетчик посланых пакетов
+		/// </summary>
+		public int SendCounter
+		{
+			get { return _sendCounter; }
+			private set { _sendCounter = value; }
+		}
+
+		/// <summary>
+		/// Счетчик полученых пакетов
+		/// </summary>
+		public int RecieveCounter
+		{
+			get { return _recieveCounter; }
+			private set { _recieveCounter = value; }
+		}
+
+		/// <summary>
+		/// Счетчик ошибочных пакетов
+		/// </summary>
+		public int ErrorCounter
+		{
+			get { return _errorCounter; }
+			private set { _errorCounter = value; }
+		}
 
 		#endregion
+
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
 			try
@@ -209,6 +266,7 @@ namespace Butek.ModBus
 			_waitResponse = false;
 			if (buffer.Length < 5)
 			{
+				ErrorCounter++;
 				if (CheckRepeat())
 					return;
 				_eventArgument.Status = ModBusStatus.UnknowPacket;
@@ -219,6 +277,7 @@ namespace Butek.ModBus
 			var error = (buffer[1] & 0x80) == 0x80;
 			if (_requestFunction != function)
 			{
+				ErrorCounter++;
 				if (CheckRepeat())
 					return;
 				_eventArgument.Status = ModBusStatus.InvalidFunction;
@@ -227,6 +286,7 @@ namespace Butek.ModBus
 			}
 			if (!CRC.CheckCRC(buffer, 0, buffer.Length - 2, buffer, buffer.Length - 2))
 			{
+				ErrorCounter++;
 				if (CheckRepeat())
 					return;
 
@@ -236,6 +296,7 @@ namespace Butek.ModBus
 			}
 			if (buffer[0] != _addressSlave)
 			{
+				ErrorCounter++;
 				if (CheckRepeat())
 					return;
 				_eventArgument.Status = ModBusStatus.AddressSlaveError;
@@ -245,12 +306,14 @@ namespace Butek.ModBus
 
 			if (error)
 			{
+				ErrorCounter++;
 				_eventArgument.Status = ModBusStatus.FunctionError;
 				_eventArgument.Function = buffer[1];
 				_eventArgument.data = new short[] { buffer[2] };
 				OnExchangeEnd();
 				return;
 			}
+			RecieveCounter++;
 			_eventArgument.Function = buffer[1];
 			// Определяем тип функции
 			switch (function)
@@ -472,6 +535,12 @@ namespace Butek.ModBus
 				throw new BusyException();
 		}
 
+		public void ClearCounter()
+		{
+			ErrorCounter = 0;
+			SendCounter = 0;
+			RecieveCounter = 0;
+		}
 		/// <summary>
 		///     Повтор посылки последней
 		/// </summary>
@@ -507,6 +576,7 @@ namespace Butek.ModBus
 #endif
 				_packetDetectedArgument.Data = _bufferTransmit;
 				_packetDetectedArgument.IsTransmitted = true;
+				SendCounter++;
 				OnPacketDetected();
 
 				_waitResponse = true;
