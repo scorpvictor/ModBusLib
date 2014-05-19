@@ -89,10 +89,7 @@ namespace Butek.ModBus
 
 		public ModBus()
 		{
-			_timerOut.Interval = _timeOut;
-			_timerOut.Tick += timerOut_Tick;
-			_timerCheck.Interval = 20;
-			_timerCheck.Tick += timerCheck_Tick;
+			Init();
 		}
 
 		/// <summary>
@@ -101,10 +98,7 @@ namespace Butek.ModBus
 		public ModBus(string fileName)
 		{
 			_fileName = fileName;
-			_timerOut.Interval = _timeOut;
-			_timerOut.Tick += timerOut_Tick;
-			_timerCheck.Interval = 20;
-			_timerCheck.Tick += timerCheck_Tick;
+			Init();
 		}
 
 		#endregion
@@ -161,6 +155,17 @@ namespace Butek.ModBus
 
 		#endregion
 
+		void Init()
+		{
+			_timerOut.Interval = _timeOut;
+			_timerOut.Tick += timerOut_Tick;
+			_timerCheck.Interval = 10;
+			_timerCheck.Tick += timerCheck_Tick;
+			_serialPort.ReadTimeout = SerialPort.InfiniteTimeout;
+			_serialPort.WriteTimeout = SerialPort.InfiniteTimeout;
+
+		}
+
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
 			try
@@ -196,9 +201,9 @@ namespace Butek.ModBus
 			_timerCheck.Stop();
 			_timerOut.Stop();
 			_counterRepeat++;
-			if (_counterRepeat < _numberRepeatMax)
-			{				
-				Repeat();
+			if (_counterRepeat <= _numberRepeatMax)
+			{
+				RepeatRequest();
 				return true;
 			}
 			return false;
@@ -206,6 +211,7 @@ namespace Butek.ModBus
 
 		private void timerOut_Tick(object sender, EventArgs e)
 		{
+			ErrorCounter++;
 			if (!CheckRepeat())
 			{
 				_waitResponse = false;
@@ -440,8 +446,7 @@ namespace Butek.ModBus
 		{
 			if (!_waitResponse)
 			{
-				// очищаем буфер приемный
-				//serialPort.Read(new byte[serialPort.BytesToRead], 0, serialPort.BytesToRead);
+				_counterRepeat = 0;
 				int i = 0;
 				_bufferTransmit = new byte[8];
 				_addressSlave = address;
@@ -457,7 +462,7 @@ namespace Butek.ModBus
 				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, 6) >> 8);
 
 				_requestFunction = 3;
-				Repeat();
+				RepeatRequest();
 			}
 			else
 				throw new BusyException();
@@ -473,6 +478,7 @@ namespace Butek.ModBus
 		{
 			if (!_waitResponse)
 			{
+				_counterRepeat = 0;
 				int i = 0;
 				_bufferTransmit = new byte[(data == null ? 0 : data.Length) + 5];
 				_addressSlave = address;
@@ -488,7 +494,7 @@ namespace Butek.ModBus
 				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2) >> 8);
 
 				_requestFunction = function;
-				Repeat();
+				RepeatRequest();
 			}
 			else
 				throw new BusyException();
@@ -504,6 +510,7 @@ namespace Butek.ModBus
 		{
 			if (!_waitResponse)
 			{
+				_counterRepeat = 0;
 				int i = 0;
 				_bufferTransmit = new byte[numberReg * 2 + 9];
 				_addressSlave = address;
@@ -529,7 +536,7 @@ namespace Butek.ModBus
 				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, _bufferTransmit.Length - 2) >> 8);
 
 				_requestFunction = 0x10;
-				Repeat();
+				RepeatRequest();
 			}
 			else
 				throw new BusyException();
@@ -546,45 +553,48 @@ namespace Butek.ModBus
 		/// </summary>
 		public void Repeat()
 		{
-			if (!_waitResponse)
-			{
-				// очищаем буфер приемный
-				try
-				{
-					_bytesRead = int.MaxValue;
-					_serialPort.DiscardInBuffer();
-					_counterRepeat = 0;
-					_serialPort.Write(_bufferTransmit, 0, _bufferTransmit.Length);
-				}
-				catch (InvalidOperationException exc)
-				{
-					if (CatchSerialException(exc))
-						return;
-				}
-				catch (IOException exc)
-				{
-					if (CatchSerialException(exc))
-						return;
-				}
-#if DEBUG
-				Console.Write("Send:");
-				foreach (byte b in _bufferTransmit)
-				{
-					Console.Write("{0} ", b.ToString("X2"));
-				}
-				Console.WriteLine();
-#endif
-				_packetDetectedArgument.Data = _bufferTransmit;
-				_packetDetectedArgument.IsTransmitted = true;
-				SendCounter++;
-				OnPacketDetected();
-
-				_waitResponse = true;
-				_timerOut.Start();
-				_timerCheck.Start();
-			}
+			if(!_waitResponse)
+				RepeatRequest();
+			else
+				throw new BusyException();
 		}
 
+		void RepeatRequest()
+		{
+			// очищаем буфер приемный
+			try
+			{
+				_bytesRead = int.MaxValue;
+				_serialPort.DiscardInBuffer();
+				_serialPort.Write(_bufferTransmit, 0, _bufferTransmit.Length);
+			}
+			catch (InvalidOperationException exc)
+			{
+				if (CatchSerialException(exc))
+					return;
+			}
+			catch (IOException exc)
+			{
+				if (CatchSerialException(exc))
+					return;
+			}
+#if DEBUG
+			Console.Write("Send:");
+			foreach (byte b in _bufferTransmit)
+			{
+				Console.Write("{0} ", b.ToString("X2"));
+			}
+			Console.WriteLine();
+#endif
+			_packetDetectedArgument.Data = _bufferTransmit;
+			_packetDetectedArgument.IsTransmitted = true;
+			SendCounter++;
+			OnPacketDetected();
+
+			_waitResponse = true;
+			_timerOut.Start();
+			_timerCheck.Start();
+		}
 		/// <summary>
 		///     Открывает порт
 		/// </summary>

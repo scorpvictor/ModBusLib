@@ -104,6 +104,7 @@ namespace Butek.ModBus
 			this.SelectPort.Name = "SelectPort";
 			this.SelectPort.Size = new System.Drawing.Size(191, 21);
 			this.SelectPort.TabIndex = 8;
+			this.SelectPort.SelectedIndexChanged += new System.EventHandler(this.SelectPort_SelectedIndexChanged);
 			// 
 			// label6
 			// 

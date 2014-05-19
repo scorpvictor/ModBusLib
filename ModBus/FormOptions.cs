@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.IO.Ports;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Serialization;
+using Butek.ModBus.Helpers;
 using Butek.ModBus.Properties;
 
 namespace Butek.ModBus
@@ -21,14 +25,15 @@ namespace Butek.ModBus
 			SelectStopBits.SelectedItem = SettingsOptions.Default.stopBits;
 			SelectParity.SelectedItem = SettingsOptions.Default.parity;
 			comboBoxFlowControl.SelectedItem = SettingsOptions.Default.flowControl;
-			SelectBaudRate.SelectedItem = SettingsOptions.Default.baudRate;
 			SelectBits.SelectedItem = SettingsOptions.Default.dataBits;
 			RefreshButton_Click(this, null);
 			foreach (object item in SelectPort.Items)
 			{
-				if (((COMPortItem) item).Name == SettingsOptions.Default.comPort)
+				if (((COMPortItem)item).Name == SettingsOptions.Default.comPort)
 					SelectPort.SelectedItem = item;
 			}
+			SelectBaudRate.SelectedItem = SettingsOptions.Default.baudRate;
+
 			SelectTimeout.Text = SettingsOptions.Default.timeOut.ToString(CultureInfo.InvariantCulture);
 			SelectNumberRepeat.Text = SettingsOptions.Default.numberRepeat.ToString(CultureInfo.InvariantCulture);
 		}
@@ -41,15 +46,15 @@ namespace Butek.ModBus
 			Settings = settings;
 			SelectStopBits.SelectedItem = settings.StopBits;
 			SelectParity.SelectedItem = settings.Parity;
-			comboBoxFlowControl.SelectedItem = settings.FlowControl;
-			SelectBaudRate.SelectedItem = settings.BaudRate;
+			comboBoxFlowControl.SelectedItem = settings.FlowControl;			
 			SelectBits.SelectedItem = settings.DataBits;
 			RefreshButton_Click(this, null);
 			foreach (object item in SelectPort.Items)
 			{
-				if (((COMPortItem) item).Name == settings.ComPort)
+				if (((COMPortItem)item).Name == settings.ComPort)
 					SelectPort.SelectedItem = item;
 			}
+			SelectBaudRate.SelectedItem = settings.BaudRate;
 			SelectTimeout.Text = settings.TimeOut.ToString(CultureInfo.InvariantCulture);
 			SelectNumberRepeat.Text = settings.NumberRepeat.ToString(CultureInfo.InvariantCulture);
 		}
@@ -59,24 +64,11 @@ namespace Butek.ModBus
 		private void Init()
 		{
 			InitializeComponent();
-			SelectStopBits.DataSource = Enum.GetValues(typeof (StopBits));
+			SelectStopBits.DataSource = Enum.GetValues(typeof(StopBits));
 
-			SelectParity.DataSource = Enum.GetValues(typeof (Parity));
+			SelectParity.DataSource = Enum.GetValues(typeof(Parity));
 
-			comboBoxFlowControl.DataSource = Enum.GetValues(typeof (Handshake));
-
-			SelectBaudRate.Items.Add(300);
-			SelectBaudRate.Items.Add(600);
-			SelectBaudRate.Items.Add(1200);
-			SelectBaudRate.Items.Add(2400);
-			SelectBaudRate.Items.Add(4800);
-			SelectBaudRate.Items.Add(9600);
-			SelectBaudRate.Items.Add(14400);
-			SelectBaudRate.Items.Add(19200);
-			SelectBaudRate.Items.Add(38400);
-			SelectBaudRate.Items.Add(56000);
-			SelectBaudRate.Items.Add(57600);
-			SelectBaudRate.Items.Add(115200);
+			comboBoxFlowControl.DataSource = Enum.GetValues(typeof(Handshake));
 
 			SelectBits.Items.Add(7);
 			SelectBits.Items.Add(8);
@@ -89,7 +81,7 @@ namespace Butek.ModBus
 			foreach (string portName in SerialPort.GetPortNames())
 			{
 				string fullName = WMITools.GetFullNameComPort(portName);
-				var ci = new COMPortItem {FullName = fullName, Name = portName};
+				var ci = new COMPortItem { FullName = fullName, Name = portName };
 				if (fullName != null)
 					SelectPort.Items.Add(ci);
 			}
@@ -117,13 +109,13 @@ namespace Butek.ModBus
 			XmlReader xmlReader = new XmlTextReader(fileName);
 			try
 			{
-				var v = (CustomSettings) xmlSer.Deserialize(xmlReader);
+				var v = (CustomSettings)xmlSer.Deserialize(xmlReader);
 				xmlReader.Close();
 				return v;
 			}
 			catch (Exception exc)
 			{
-				if (exc.InnerException.GetType() == typeof (FileNotFoundException))
+				if (exc.InnerException.GetType() == typeof(FileNotFoundException))
 				{
 					settings = new CustomSettings
 						{
@@ -146,12 +138,12 @@ namespace Butek.ModBus
 		{
 			if (string.IsNullOrEmpty(_fileName))
 			{
-				SettingsOptions.Default.stopBits = (StopBits) SelectStopBits.SelectedItem;
-				SettingsOptions.Default.parity = (Parity) SelectParity.SelectedItem;
-				SettingsOptions.Default.flowControl = (Handshake) comboBoxFlowControl.SelectedItem;
-				SettingsOptions.Default.baudRate = (int) SelectBaudRate.SelectedItem;
-				SettingsOptions.Default.dataBits = (int) SelectBits.SelectedItem;
-				SettingsOptions.Default.comPort = ((COMPortItem) SelectPort.SelectedItem).Name;
+				SettingsOptions.Default.stopBits = (StopBits)SelectStopBits.SelectedItem;
+				SettingsOptions.Default.parity = (Parity)SelectParity.SelectedItem;
+				SettingsOptions.Default.flowControl = (Handshake)comboBoxFlowControl.SelectedItem;
+				SettingsOptions.Default.baudRate = (int)SelectBaudRate.SelectedItem;
+				SettingsOptions.Default.dataBits = (int)SelectBits.SelectedItem;
+				SettingsOptions.Default.comPort = ((COMPortItem)SelectPort.SelectedItem).Name;
 				SettingsOptions.Default.timeOut = int.Parse(SelectTimeout.Text);
 				SettingsOptions.Default.numberRepeat = int.Parse(SelectNumberRepeat.Text);
 				SettingsOptions.Default.Save();
@@ -160,18 +152,52 @@ namespace Butek.ModBus
 			{
 				var settings = new CustomSettings
 					{
-						BaudRate = (int) SelectBaudRate.SelectedItem,
-						ComPort = ((COMPortItem) SelectPort.SelectedItem).Name,
-						DataBits = (int) SelectBits.SelectedItem,
-						FlowControl = (Handshake) comboBoxFlowControl.SelectedItem,
+						BaudRate = (int)SelectBaudRate.SelectedItem,
+						ComPort = ((COMPortItem)SelectPort.SelectedItem).Name,
+						DataBits = (int)SelectBits.SelectedItem,
+						FlowControl = (Handshake)comboBoxFlowControl.SelectedItem,
 						NumberRepeat = int.Parse(SelectNumberRepeat.Text),
-						Parity = (Parity) SelectParity.SelectedItem,
-						StopBits = (StopBits) SelectStopBits.SelectedItem,
+						Parity = (Parity)SelectParity.SelectedItem,
+						StopBits = (StopBits)SelectStopBits.SelectedItem,
 						TimeOut = int.Parse(SelectTimeout.Text)
 					};
 				Settings = settings;
 				SaveSettings(_fileName, settings);
 			}
 		}
+
+		private void SelectPort_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			var prop = SerialPortHelper.GetComPortProperties(((COMPortItem)SelectPort.SelectedItem).Name);			
+			var result = (SerialPortHelper.Baud)prop.dwSettableBaud;
+			var tmp = Enum.GetValues((typeof(SerialPortHelper.Baud)));
+			var selectedItem = SelectBaudRate.SelectedItem;
+			SelectBaudRate.Items.Clear();
+			var listBaud = new List<object>();
+			foreach (Enum br in tmp)
+			{
+				var item = GetEnumDescription(br);
+				try
+				{
+					listBaud.Add(int.Parse(item));
+				}
+				catch (FormatException)
+				{ continue; }
+			}
+			SelectBaudRate.Items.AddRange(listBaud.OrderBy(o => o).ToArray());
+			if (listBaud.Contains(selectedItem))
+				SelectBaudRate.SelectedItem = selectedItem;
+			else
+				SelectBaudRate.SelectedItem = SelectBaudRate.Items[0];
+		}
+		public static string GetEnumDescription(Enum value)
+		{
+			var fi = value.GetType().GetField(value.ToString());
+			var attributes =
+			  (DescriptionAttribute[])fi.GetCustomAttributes
+			  (typeof(DescriptionAttribute), false);
+			return (attributes.Length > 0) ? attributes[0].Description : value.ToString();
+		}
+
 	}
 }
