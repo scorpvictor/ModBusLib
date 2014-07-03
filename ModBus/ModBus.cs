@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Ports;
 using System.Windows.Forms;
 using Butek.ModBus.Properties;
+using Timer = System.Timers.Timer;
 
 
 namespace Butek.ModBus
@@ -158,9 +159,9 @@ namespace Butek.ModBus
 		void Init()
 		{
 			_timerOut.Interval = _timeOut;
-			_timerOut.Tick += timerOut_Tick;
+			_timerOut.Elapsed += timerOut_Tick;
 			_timerCheck.Interval = 10;
-			_timerCheck.Tick += timerCheck_Tick;
+			_timerCheck.Elapsed += timerCheck_Tick;
 			_serialPort.ReadTimeout = SerialPort.InfiniteTimeout;
 			_serialPort.WriteTimeout = SerialPort.InfiniteTimeout;
 
@@ -168,12 +169,12 @@ namespace Butek.ModBus
 
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
+			_timerCheck.Stop();
 			try
 			{
 				var count = _serialPort.BytesToRead;
 				if (_bytesRead == count && count != 0)
 				{
-					_timerCheck.Stop();
 					_timerOut.Stop();
 					CheckData();
 					return;
@@ -181,7 +182,7 @@ namespace Butek.ModBus
 				if (_bytesRead != count)
 				{
 					_bytesRead = _serialPort.BytesToRead;
-					_timerCheck.Reset();
+					_timerCheck.Start();
 					_timerOut.Reset();
 				}
 			}
@@ -190,6 +191,8 @@ namespace Butek.ModBus
 				if (CatchSerialException(exc))
 					return;
 			}
+
+			_timerCheck.Start();
 		}
 
 		/// <summary>
