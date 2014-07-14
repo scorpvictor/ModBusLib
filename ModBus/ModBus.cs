@@ -158,6 +158,8 @@ namespace Butek.ModBus
 
 		void Init()
 		{
+			_timerOut.AutoReset = false;
+			_timerCheck.AutoReset = false;
 			_timerOut.Interval = _timeOut;
 			_timerOut.Elapsed += timerOut_Tick;
 			_timerCheck.Interval = 10;
@@ -169,7 +171,6 @@ namespace Butek.ModBus
 
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
-			_timerCheck.Stop();
 			try
 			{
 				var count = _serialPort.BytesToRead;
@@ -184,6 +185,7 @@ namespace Butek.ModBus
 					_bytesRead = _serialPort.BytesToRead;
 					_timerCheck.Start();
 					_timerOut.Reset();
+					return;
 				}
 			}
 			catch (InvalidOperationException exc)
@@ -191,8 +193,7 @@ namespace Butek.ModBus
 				if (CatchSerialException(exc))
 					return;
 			}
-
-			_timerCheck.Start();
+			_timerCheck.Start();			
 		}
 
 		/// <summary>
@@ -201,8 +202,6 @@ namespace Butek.ModBus
 		/// <returns></returns>
 		bool CheckRepeat()
 		{
-			_timerCheck.Stop();
-			_timerOut.Stop();
 			_counterRepeat++;
 			if (_counterRepeat <= _numberRepeatMax)
 			{
@@ -611,9 +610,9 @@ namespace Butek.ModBus
 				{
 					LoadSettingsPort();
 					_serialPort.Open();
-					_eventArgument.Status = ModBusStatus.PortOk;
-					OnExchangeEnd();
 				}
+				_eventArgument.Status = ModBusStatus.PortOk;
+				OnExchangeEnd();
 			}
 			catch
 			{
