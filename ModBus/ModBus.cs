@@ -168,7 +168,10 @@ namespace Butek.ModBus
 			_serialPort.WriteTimeout = SerialPort.InfiniteTimeout;
 
 		}
-
+		/// <summary>
+		/// Для надежности получения посылки
+		/// </summary>
+		private int _checkCounter = 0;
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
 			try
@@ -176,12 +179,24 @@ namespace Butek.ModBus
 				var count = _serialPort.BytesToRead;
 				if (_bytesRead == count && count != 0)
 				{
+					double max = 1;
+					// ведем расчет так чтобы интервал таймера провекри перекрывал половину интервала передачи 40ка байт
+					var k = _timerCheck.Interval / (40d * 10d * 1000d / _serialPort.BaudRate);
+					if (k < 1)
+						max = Math.Round(1 / k);
+					if (_checkCounter++ < max)
+					{
+						_timerCheck.Start();
+						_timerOut.Reset();
+						return;
+					}
 					_timerOut.Stop();
 					CheckData();
 					return;
 				}
 				if (_bytesRead != count)
 				{
+					_checkCounter = 0;
 					_bytesRead = _serialPort.BytesToRead;
 					_timerCheck.Start();
 					_timerOut.Reset();
@@ -193,7 +208,7 @@ namespace Butek.ModBus
 				if (CatchSerialException(exc))
 					return;
 			}
-			_timerCheck.Start();			
+			_timerCheck.Start();
 		}
 
 		/// <summary>
@@ -315,6 +330,8 @@ namespace Butek.ModBus
 			if (error)
 			{
 				ErrorCounter++;
+				if (CheckRepeat())
+					return;
 				_eventArgument.Status = ModBusStatus.FunctionError;
 				_eventArgument.Function = buffer[1];
 				_eventArgument.data = new short[] { buffer[2] };
@@ -555,8 +572,11 @@ namespace Butek.ModBus
 		/// </summary>
 		public void Repeat()
 		{
-			if(!_waitResponse)
+			if (!_waitResponse)
+			{
+				_counterRepeat = 0;
 				RepeatRequest();
+			}
 			else
 				throw new BusyException();
 		}
