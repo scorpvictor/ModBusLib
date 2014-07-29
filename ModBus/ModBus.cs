@@ -179,7 +179,7 @@ namespace Butek.ModBus
 				var count = _serialPort.BytesToRead;
 				if (_bytesRead == count && count != 0)
 				{
-					double max = 1;
+					double max = 2;
 					// ведем расчет так чтобы интервал таймера провекри перекрывал половину интервала передачи 40ка байт
 					var k = _timerCheck.Interval / (40d * 10d * 1000d / _serialPort.BaudRate);
 					if (k < 1)
@@ -574,6 +574,7 @@ namespace Butek.ModBus
 		{
 			if (!_waitResponse)
 			{
+				_checkCounter = 0;
 				_counterRepeat = 0;
 				RepeatRequest();
 			}
