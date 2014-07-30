@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Ports;
+using System.Linq;
 using System.Windows.Forms;
 using Butek.ModBus.Properties;
 using Timer = System.Timers.Timer;
@@ -23,7 +24,7 @@ namespace Butek.ModBus
 		private readonly SerialPort _serialPort = new SerialPort();
 		private readonly Timer _timerCheck = new Timer();
 		private readonly Timer _timerOut = new Timer();
-		private readonly ModBusEventArg _eventArgument = new ModBusEventArg();
+		private ModBusEventArg _eventArgument = new ModBusEventArg();
 
 		/// <summary>
 		///     Адрес подчиненого
@@ -40,15 +41,10 @@ namespace Butek.ModBus
 		/// </summary>
 		private int _requestFunction;
 
-		/// <summary>
-		///     Ожидаемое количество байт на чтение
-		/// </summary>
-		private int _bytesToRead;
-
 		private int _counterRepeat;
 
 		/// <summary>
-		///     Максимальное число повторов запросов при таймауте
+		///     Максимальное число повторов запросов
 		/// </summary>
 		private int _numberRepeatMax = 5;
 
@@ -154,6 +150,15 @@ namespace Butek.ModBus
 			private set { _errorCounter = value; }
 		}
 
+		/// <summary>
+		///     Максимальное число повторов запросов
+		/// </summary>
+		public int NumberRepeatMax
+		{
+			get { return _numberRepeatMax; }
+			set { _numberRepeatMax = value; }
+		}
+
 		#endregion
 
 		void Init()
@@ -168,38 +173,57 @@ namespace Butek.ModBus
 			_serialPort.WriteTimeout = SerialPort.InfiniteTimeout;
 
 		}
-		/// <summary>
-		/// Для надежности получения посылки
-		/// </summary>
-		private int _checkCounter = 0;
+		private byte[] _bytesReadArray;
+
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
 			try
 			{
 				var count = _serialPort.BytesToRead;
-				if (_bytesRead == count && count != 0)
+				if (count != 0)
 				{
-					double max = 2;
-					// ведем расчет так чтобы интервал таймера провекри перекрывал половину интервала передачи 40ка байт
-					var k = _timerCheck.Interval / (40d * 10d * 1000d / _serialPort.BaudRate);
-					if (k < 1)
-						max = Math.Round(1 / k);
-					if (_checkCounter++ < max)
+					if (_bytesReadArray == null || _bytesReadArray.Length == 0)
 					{
-						_timerCheck.Start();
-						_timerOut.Reset();
-						return;
+						_bytesReadArray = new byte[count];
+						_serialPort.Read(_bytesReadArray, 0, count);
 					}
+					else
+					{
+						var bytesArray = new byte[count];
+						_serialPort.Read(bytesArray, 0, count);
+						var oldLength = _bytesReadArray.Length;
+						Array.Resize(ref _bytesReadArray, _bytesReadArray.Length + count);
+						Array.Copy(bytesArray, 0, _bytesReadArray, oldLength, count);
+					}
+					var result = CheckData(_bytesReadArray);
 					_timerOut.Stop();
-					CheckData();
-					return;
-				}
-				if (_bytesRead != count)
-				{
-					_checkCounter = 0;
-					_bytesRead = _serialPort.BytesToRead;
-					_timerCheck.Start();
-					_timerOut.Reset();
+					switch (result.Status)
+					{
+						case ModBusStatus.PresetMultipleRegistersOK:
+						case ModBusStatus.ReadHoldingRegistersOK:
+						case ModBusStatus.CustomFunctionOk:
+							_waitResponse = false;
+							RecieveCounter++;
+							RaisePacketDetected(_bytesReadArray);
+							_eventArgument = result;
+							OnExchangeEnd();
+							break;
+						case ModBusStatus.CRCError:
+						case ModBusStatus.UnknowPacket:
+						case ModBusStatus.None:
+							_timerCheck.Start();
+							_timerOut.Reset();
+							break;
+						default:
+							ErrorCounter++;
+							RaisePacketDetected(_bytesReadArray);
+							if (!CheckRepeat())
+							{
+								_eventArgument = result;
+								OnExchangeEnd();
+							}
+							break;
+					}
 					return;
 				}
 			}
@@ -218,7 +242,7 @@ namespace Butek.ModBus
 		bool CheckRepeat()
 		{
 			_counterRepeat++;
-			if (_counterRepeat <= _numberRepeatMax)
+			if (_counterRepeat <= NumberRepeatMax)
 			{
 				RepeatRequest();
 				return true;
@@ -228,12 +252,29 @@ namespace Butek.ModBus
 
 		private void timerOut_Tick(object sender, EventArgs e)
 		{
-			ErrorCounter++;
-			if (!CheckRepeat())
+			var result = CheckData(_bytesReadArray);
+			switch (result.Status)
 			{
-				_waitResponse = false;
-				_eventArgument.Status = ModBusStatus.TimeOutError;
-				OnExchangeEnd();
+				case ModBusStatus.PresetMultipleRegistersOK:
+				case ModBusStatus.ReadHoldingRegistersOK:
+				case ModBusStatus.CustomFunctionOk:
+					_waitResponse = false;
+					RecieveCounter++;
+					_timerCheck.Stop();
+					RaisePacketDetected(_bytesReadArray);
+					_eventArgument = result;
+					OnExchangeEnd();
+					break;
+
+				default:
+					ErrorCounter++;
+					if (!CheckRepeat())
+					{
+						_waitResponse = false;
+						_eventArgument = new ModBusEventArg() { Status = ModBusStatus.TimeOutError };
+						OnExchangeEnd();
+					}
+					break;
 			}
 		}
 
@@ -257,25 +298,10 @@ namespace Butek.ModBus
 			}
 		}
 
-		/// <summary>
-		///     проверяем полученные данные
-		/// </summary>
-		private void CheckData()
+		void RaisePacketDetected(byte[] buffer)
 		{
-			byte[] buffer = null;
-			try
-			{
-				buffer = new byte[_serialPort.BytesToRead];
-				_serialPort.Read(buffer, 0, buffer.Length);
-			}
-			catch (InvalidOperationException exc)
-			{
-				if (CatchSerialException(exc))
-					return;
-			}
-
 #if DEBUG
-			Console.Write(string.Format("{0} Receive:", _serialPort.PortName));
+			Console.Write("{0} Receive:", _serialPort.PortName);
 			foreach (byte b in buffer)
 			{
 				Console.Write("{0} ", b.ToString("X2"));
@@ -285,98 +311,94 @@ namespace Butek.ModBus
 			_packetDetectedArgument.Data = buffer;
 			_packetDetectedArgument.IsRecieved = true;
 			OnPacketDetected();
+		}
 
-			_waitResponse = false;
-			if (buffer.Length < 5)
+		/// <summary>
+		/// проверяем полученные данные
+		/// </summary>
+		private ModBusEventArg CheckData(byte[] buffer)
+		{
+			if (buffer == null || buffer.Length <= 2)
 			{
-				ErrorCounter++;
-				if (CheckRepeat())
-					return;
-				_eventArgument.Status = ModBusStatus.UnknowPacket;
-				OnExchangeEnd();
-				return;
+				return new ModBusEventArg { Status = ModBusStatus.None };
+			}
+			if (buffer[0] != _addressSlave)
+			{
+				return new ModBusEventArg { Status = ModBusStatus.AddressSlaveError };
 			}
 			var function = buffer[1] & ~0x80;
 			var error = (buffer[1] & 0x80) == 0x80;
 			if (_requestFunction != function)
 			{
-				ErrorCounter++;
-				if (CheckRepeat())
-					return;
-				_eventArgument.Status = ModBusStatus.InvalidFunction;
-				OnExchangeEnd();
-				return;
+				return new ModBusEventArg { Status = ModBusStatus.InvalidFunction };
 			}
+			//_waitResponse = false;
+			if (buffer.Length < 5)
+			{
+				//				ErrorCounter++;
+				//				if (CheckRepeat())
+				//					return true;
+				//				_eventArgument.Status = ModBusStatus.UnknowPacket;
+				//				OnExchangeEnd();
+				//				return false;
+				return new ModBusEventArg { Status = ModBusStatus.UnknowPacket };
+			}
+
 			if (!CRC.CheckCRC(buffer, 0, buffer.Length - 2, buffer, buffer.Length - 2))
 			{
-				ErrorCounter++;
-				if (CheckRepeat())
-					return;
-
-				_eventArgument.Status = ModBusStatus.CRCError;
-				OnExchangeEnd();
-				return;
-			}
-			if (buffer[0] != _addressSlave)
-			{
-				ErrorCounter++;
-				if (CheckRepeat())
-					return;
-				_eventArgument.Status = ModBusStatus.AddressSlaveError;
-				OnExchangeEnd();
-				return;
+				return new ModBusEventArg { Status = ModBusStatus.CRCError };
 			}
 
 			if (error)
 			{
-				ErrorCounter++;
-				if (CheckRepeat())
-					return;
-				_eventArgument.Status = ModBusStatus.FunctionError;
-				_eventArgument.Function = buffer[1];
-				_eventArgument.data = new short[] { buffer[2] };
-				OnExchangeEnd();
-				return;
+				return new ModBusEventArg
+				{
+					Status = ModBusStatus.FunctionError,
+					Function = buffer[1],
+					data = new short[] { buffer[2] },
+				};
 			}
-			RecieveCounter++;
-			_eventArgument.Function = buffer[1];
+			//			RecieveCounter++;
+			var ea = new ModBusEventArg
+			{
+				Function = buffer[1]
+			};
 			// Определяем тип функции
 			switch (function)
 			{
 				// Read Holding Registers
 				case 3:
-					_eventArgument.data = new short[buffer[2] / 2];
-					_eventArgument.Status = ModBusStatus.ReadHoldingRegistersOK;
+					ea.data = new short[buffer[2] / 2];
+					ea.Status = ModBusStatus.ReadHoldingRegistersOK;
 
 					int i = 0;
-					while (i != _eventArgument.data.Length)
+					while (i != ea.data.Length)
 					{
-						_eventArgument.data[i] = (short)(buffer[i * 2 + 3] << 8);
-						_eventArgument.data[i] += buffer[i * 2 + 1 + 3];
+						ea.data[i] = (short)(buffer[i * 2 + 3] << 8);
+						ea.data[i] += buffer[i * 2 + 1 + 3];
 						i++;
 					}
-					OnExchangeEnd();
 					break;
 
 				// Preset Multiple Registers
 				case 0x10:
-					_eventArgument.data = new short[0];
-					_eventArgument.Status = ModBusStatus.PresetMultipleRegistersOK;
-					OnExchangeEnd();
+					ea.data = new short[0];
+					ea.Status = ModBusStatus.PresetMultipleRegistersOK;
 					break;
 				default:
-					_eventArgument.data = new short[buffer[2] / 2];
-					_eventArgument.Status = ModBusStatus.CustomFunctionOk;
+					ea.data = new short[buffer[2] / 2];
+					ea.Status = ModBusStatus.CustomFunctionOk;
 					i = 0;
-					while (i != _eventArgument.data.Length)
+					while (i != ea.data.Length)
 					{
-						_eventArgument.data[i] = (short)(buffer[i * 2 + 3] << 8);
-						_eventArgument.data[i] += buffer[i * 2 + 1 + 3];
+						ea.data[i] = (short)(buffer[i * 2 + 3] << 8);
+						ea.data[i] += buffer[i * 2 + 1 + 3];
 						i++;
 					}
-					OnExchangeEnd();
+
 					break;
 			}
+			return ea;
 		}
 
 
@@ -437,7 +459,7 @@ namespace Butek.ModBus
 				// Возможно это связанно с ПО Аркадия (Виртуальный COM порт не принимал правильно настройки от Хоста)
 				_serialPort.Handshake = SettingsOptions.Default.flowControl;
 				_timeOut = SettingsOptions.Default.timeOut;
-				_numberRepeatMax = SettingsOptions.Default.numberRepeat;
+				NumberRepeatMax = SettingsOptions.Default.numberRepeat;
 			}
 			else
 			{
@@ -449,7 +471,7 @@ namespace Butek.ModBus
 				_serialPort.StopBits = settings.StopBits;
 				_serialPort.Handshake = settings.FlowControl;
 				_timeOut = settings.TimeOut;
-				_numberRepeatMax = settings.NumberRepeat;
+				NumberRepeatMax = settings.NumberRepeat;
 			}
 
 			_timerOut.Interval = _timeOut;
@@ -574,7 +596,6 @@ namespace Butek.ModBus
 		{
 			if (!_waitResponse)
 			{
-				_checkCounter = 0;
 				_counterRepeat = 0;
 				RepeatRequest();
 			}
@@ -587,6 +608,7 @@ namespace Butek.ModBus
 			// очищаем буфер приемный
 			try
 			{
+				Array.Resize(ref _bytesReadArray, 0);
 				_bytesRead = int.MaxValue;
 				_serialPort.DiscardInBuffer();
 				_serialPort.Write(_bufferTransmit, 0, _bufferTransmit.Length);
@@ -602,7 +624,7 @@ namespace Butek.ModBus
 					return;
 			}
 #if DEBUG
-			Console.Write("Send:");
+			Console.Write("{0} Send:", _serialPort.PortName);
 			foreach (byte b in _bufferTransmit)
 			{
 				Console.Write("{0} ", b.ToString("X2"));
@@ -611,6 +633,7 @@ namespace Butek.ModBus
 #endif
 			_packetDetectedArgument.Data = _bufferTransmit;
 			_packetDetectedArgument.IsTransmitted = true;
+
 			SendCounter++;
 			OnPacketDetected();
 
@@ -812,6 +835,7 @@ namespace Butek.ModBus
 		public short[] Data
 		{
 			get { return data; }
+			internal set { data = value; }
 		}
 
 		public ModBusStatus Status
