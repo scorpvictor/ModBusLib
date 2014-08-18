@@ -219,6 +219,7 @@ namespace Butek.ModBus
 							RaisePacketDetected(_bytesReadArray);
 							if (!CheckRepeat())
 							{
+								_waitResponse = false;
 								_eventArgument = result;
 								OnExchangeEnd();
 							}
