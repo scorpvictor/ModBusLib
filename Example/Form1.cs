@@ -52,7 +52,7 @@ namespace Example
 				return;
 			}
 
-			Console.WriteLine(@"Function: {0}, Status: {1}", modBusEventArg.Function, modBusEventArg.Status);
+			Console.WriteLine(@"Function: {0:x}, Status: {1}", modBusEventArg.Function, modBusEventArg.Status);
 			UpdateData();
 		}
 		private delegate void SetTextDeleg(int recCount, int errCount, int sendCount);

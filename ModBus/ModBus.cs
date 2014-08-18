@@ -248,6 +248,7 @@ namespace Butek.ModBus
 				RepeatRequest();
 				return true;
 			}
+			_waitResponse = false;
 			return false;
 		}
 
@@ -271,7 +272,6 @@ namespace Butek.ModBus
 					ErrorCounter++;
 					if (!CheckRepeat())
 					{
-						_waitResponse = false;
 						_eventArgument = new ModBusEventArg() { Status = ModBusStatus.TimeOutError };
 						OnExchangeEnd();
 					}
