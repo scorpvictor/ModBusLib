@@ -25,7 +25,8 @@ namespace Butek.ModBus
 		private readonly Timer _timerCheck = new Timer();
 		private readonly Timer _timerOut = new Timer();
 		private ModBusEventArg _eventArgument = new ModBusEventArg();
-
+		private bool _endingSymbolEnable = true;
+		private byte _endingSymbol = 0;
 		/// <summary>
 		///     Адрес подчиненого
 		/// </summary>
@@ -159,6 +160,18 @@ namespace Butek.ModBus
 			set { _numberRepeatMax = value; }
 		}
 
+		public byte EndingSymbol
+		{
+			get { return _endingSymbol; }
+			set { _endingSymbol = value; }
+		}
+
+		public bool EndingSymbolEnable
+		{
+			get { return _endingSymbolEnable; }
+			set { _endingSymbolEnable = value; }
+		}
+
 		#endregion
 
 		void Init()
@@ -211,6 +224,8 @@ namespace Butek.ModBus
 						case ModBusStatus.CRCError:
 						case ModBusStatus.UnknowPacket:
 						case ModBusStatus.None:
+						case ModBusStatus.NoEndingSymbol:
+						case ModBusStatus.TimeOutError:
 							_timerCheck.Start();
 							_timerOut.Reset();
 							break;
@@ -272,7 +287,7 @@ namespace Butek.ModBus
 					ErrorCounter++;
 					if (!CheckRepeat())
 					{
-						_eventArgument = new ModBusEventArg() { Status = ModBusStatus.TimeOutError };
+						_eventArgument = new ModBusEventArg() { Status = result.Status };
 						OnExchangeEnd();
 					}
 					break;
@@ -319,10 +334,17 @@ namespace Butek.ModBus
 		/// </summary>
 		private ModBusEventArg CheckData(byte[] buffer)
 		{
-			if (buffer == null || buffer.Length <= 2)
+
+			if (buffer == null || buffer.Length == 0)
 			{
-				return new ModBusEventArg { Status = ModBusStatus.None };
+				return new ModBusEventArg { Status = ModBusStatus.TimeOutError };
 			}
+
+			if (buffer.Length <= 2)
+			{
+				return new ModBusEventArg { Status = ModBusStatus.UnknowPacket };
+			}
+
 			if (buffer[0] != _addressSlave)
 			{
 				return new ModBusEventArg { Status = ModBusStatus.AddressSlaveError };
@@ -333,19 +355,12 @@ namespace Butek.ModBus
 			{
 				return new ModBusEventArg { Status = ModBusStatus.InvalidFunction };
 			}
-			//_waitResponse = false;
-			if (buffer.Length < 5)
-			{
-				//				ErrorCounter++;
-				//				if (CheckRepeat())
-				//					return true;
-				//				_eventArgument.Status = ModBusStatus.UnknowPacket;
-				//				OnExchangeEnd();
-				//				return false;
-				return new ModBusEventArg { Status = ModBusStatus.UnknowPacket };
-			}
 
-			if (!CRC.CheckCRC(buffer, 0, buffer.Length - 2, buffer, buffer.Length - 2))
+			if (_endingSymbolEnable && buffer[buffer.Length - 1] != EndingSymbol)
+			{
+				return new ModBusEventArg { Status = ModBusStatus.NoEndingSymbol };
+			}
+			if (!CRC.CheckCRC(buffer, 0, buffer.Length - (_endingSymbolEnable ? 3 : 2), buffer, buffer.Length - (_endingSymbolEnable ? 3 : 2)))
 			{
 				return new ModBusEventArg { Status = ModBusStatus.CRCError };
 			}
@@ -461,6 +476,8 @@ namespace Butek.ModBus
 				_serialPort.Handshake = SettingsOptions.Default.flowControl;
 				_timeOut = SettingsOptions.Default.timeOut;
 				NumberRepeatMax = SettingsOptions.Default.numberRepeat;
+				EndingSymbolEnable = SettingsOptions.Default.endingSymbolEnable;
+				EndingSymbol = SettingsOptions.Default.endingSymbol;
 			}
 			else
 			{
@@ -472,6 +489,8 @@ namespace Butek.ModBus
 				_serialPort.StopBits = settings.StopBits;
 				_serialPort.Handshake = settings.FlowControl;
 				_timeOut = settings.TimeOut;
+				EndingSymbolEnable = settings.EndingSymbolEnable;
+				EndingSymbol = settings.EndingSymbol;
 				NumberRepeatMax = settings.NumberRepeat;
 			}
 
@@ -782,6 +801,10 @@ namespace Butek.ModBus
 		/// Пользовательская функция верна
 		/// </summary>
 		CustomFunctionOk,
+		/// <summary>
+		/// В полученной посылке нет символа окончания
+		/// </summary>
+		NoEndingSymbol
 	}
 
 	public class PacketDetectedEventArg : EventArgs

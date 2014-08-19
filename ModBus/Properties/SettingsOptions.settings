@@ -1,5 +1,5 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="ModBus.Properties" GeneratedClassName="SettingsOptions">
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Butek.ModBus.Properties" GeneratedClassName="SettingsOptions">
   <Profiles />
   <Settings>
     <Setting Name="stopBits" Type="System.IO.Ports.StopBits" Scope="User">
@@ -25,6 +25,12 @@
     </Setting>
     <Setting Name="flowControl" Type="System.IO.Ports.Handshake" Scope="User">
       <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="endingSymbolEnable" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="endingSymbol" Type="System.Byte" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
   </Settings>
 </SettingsFile>

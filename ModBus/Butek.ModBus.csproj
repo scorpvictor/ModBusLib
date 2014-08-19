@@ -54,6 +54,9 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MakarovDev.ExpandCollapsePanel">
+      <HintPath>..\lib\MakarovDev.ExpandCollapsePanel\MakarovDev.ExpandCollapsePanel.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -101,6 +104,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="ClassDiagram.cd" />
     <None Include="Resources\Update.png" />
     <None Include="Properties\SettingsOptions.settings">

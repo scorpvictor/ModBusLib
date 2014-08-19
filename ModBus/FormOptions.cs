@@ -36,6 +36,10 @@ namespace Butek.ModBus
 
 			SelectTimeout.Text = SettingsOptions.Default.timeOut.ToString(CultureInfo.InvariantCulture);
 			SelectNumberRepeat.Text = SettingsOptions.Default.numberRepeat.ToString(CultureInfo.InvariantCulture);
+			checkBoxEndingSymbolEnabled.Checked = SettingsOptions.Default.endingSymbolEnable;
+			textBoxEndingSymbol.Text = SettingsOptions.Default.endingSymbol.ToString(CultureInfo.InvariantCulture);
+			Binding();
+
 		}
 
 		public FormOptions(string fileName)
@@ -46,7 +50,7 @@ namespace Butek.ModBus
 			Settings = settings;
 			SelectStopBits.SelectedItem = settings.StopBits;
 			SelectParity.SelectedItem = settings.Parity;
-			comboBoxFlowControl.SelectedItem = settings.FlowControl;			
+			comboBoxFlowControl.SelectedItem = settings.FlowControl;
 			SelectBits.SelectedItem = settings.DataBits;
 			RefreshButton_Click(this, null);
 			foreach (object item in SelectPort.Items)
@@ -57,8 +61,17 @@ namespace Butek.ModBus
 			SelectBaudRate.SelectedItem = settings.BaudRate;
 			SelectTimeout.Text = settings.TimeOut.ToString(CultureInfo.InvariantCulture);
 			SelectNumberRepeat.Text = settings.NumberRepeat.ToString(CultureInfo.InvariantCulture);
+			checkBoxEndingSymbolEnabled.Checked = settings.EndingSymbolEnable;
+			textBoxEndingSymbol.Text = settings.EndingSymbol.ToString(CultureInfo.InvariantCulture);
+			Binding();
+
 		}
 
+		void Binding()
+		{
+			var binding = new Binding("Enabled", checkBoxEndingSymbolEnabled, "Checked");
+			textBoxEndingSymbol.DataBindings.Add(binding);
+		}
 		public CustomSettings Settings { get; private set; }
 
 		private void Init()
@@ -126,7 +139,9 @@ namespace Butek.ModBus
 							NumberRepeat = SettingsOptions.Default.numberRepeat,
 							Parity = SettingsOptions.Default.parity,
 							StopBits = SettingsOptions.Default.stopBits,
-							TimeOut = SettingsOptions.Default.timeOut
+							TimeOut = SettingsOptions.Default.timeOut,
+							EndingSymbol = SettingsOptions.Default.endingSymbol,
+							EndingSymbolEnable = SettingsOptions.Default.endingSymbolEnable
 						};
 					return settings;
 				}
@@ -146,6 +161,8 @@ namespace Butek.ModBus
 				SettingsOptions.Default.comPort = ((COMPortItem)SelectPort.SelectedItem).Name;
 				SettingsOptions.Default.timeOut = int.Parse(SelectTimeout.Text);
 				SettingsOptions.Default.numberRepeat = int.Parse(SelectNumberRepeat.Text);
+				SettingsOptions.Default.endingSymbol = byte.Parse(textBoxEndingSymbol.Text);
+				SettingsOptions.Default.endingSymbolEnable = checkBoxEndingSymbolEnabled.Checked;
 				SettingsOptions.Default.Save();
 			}
 			else
@@ -159,7 +176,9 @@ namespace Butek.ModBus
 						NumberRepeat = int.Parse(SelectNumberRepeat.Text),
 						Parity = (Parity)SelectParity.SelectedItem,
 						StopBits = (StopBits)SelectStopBits.SelectedItem,
-						TimeOut = int.Parse(SelectTimeout.Text)
+						TimeOut = int.Parse(SelectTimeout.Text),
+						EndingSymbol = byte.Parse(textBoxEndingSymbol.Text),
+						EndingSymbolEnable = checkBoxEndingSymbolEnabled.Checked
 					};
 				Settings = settings;
 				SaveSettings(_fileName, settings);
@@ -168,7 +187,7 @@ namespace Butek.ModBus
 
 		private void SelectPort_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			var prop = SerialPortHelper.GetComPortProperties(((COMPortItem)SelectPort.SelectedItem).Name);			
+			var prop = SerialPortHelper.GetComPortProperties(((COMPortItem)SelectPort.SelectedItem).Name);
 			var result = (SerialPortHelper.Baud)prop.dwSettableBaud;
 			var tmp = Enum.GetValues((typeof(SerialPortHelper.Baud)));
 			var selectedItem = SelectBaudRate.SelectedItem;
