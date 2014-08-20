@@ -104,7 +104,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
     <None Include="ClassDiagram.cd" />
     <None Include="Resources\Update.png" />
     <None Include="Properties\SettingsOptions.settings">

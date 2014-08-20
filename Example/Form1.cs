@@ -59,7 +59,7 @@ namespace Example
 		void UpdateData()
 		{
 			if (_isCreated)
-				this.BeginInvoke(new SetTextDeleg(si_DataReceived), new object[] { _modBus.RecieveCounter, _modBus.ErrorCounter, _modBus.SendCounter });
+				this.BeginInvoke(new SetTextDeleg(si_DataReceived), new object[] { _modBus.ReceiveCounter, _modBus.ErrorCounter, _modBus.SendCounter });
 		}
 		private void si_DataReceived(int recCount, int errCount, int sendCount)
 		{
