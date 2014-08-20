@@ -74,7 +74,7 @@ namespace Butek.ModBus
 		/// <summary>
 		/// Счетчик полученых пакетов
 		/// </summary>
-		private int _recieveCounter;
+		private int _receiveCounter;
 		/// <summary>
 		/// Счетчик ошибочных пакетов
 		/// </summary>
@@ -136,10 +136,10 @@ namespace Butek.ModBus
 		/// <summary>
 		/// Счетчик полученых пакетов
 		/// </summary>
-		public int RecieveCounter
+		public int ReceiveCounter
 		{
-			get { return _recieveCounter; }
-			private set { _recieveCounter = value; }
+			get { return _receiveCounter; }
+			private set { _receiveCounter = value; }
 		}
 
 		/// <summary>
@@ -190,65 +190,70 @@ namespace Butek.ModBus
 
 		private void timerCheck_Tick(object sender, EventArgs e)
 		{
-			try
+			lock (_timerCheck)
 			{
-				var count = _serialPort.BytesToRead;
-				if (count != 0)
+				try
 				{
-					if (_bytesReadArray == null || _bytesReadArray.Length == 0)
+					var count = _serialPort.BytesToRead;
+					if (count != 0)
 					{
-						_bytesReadArray = new byte[count];
-						_serialPort.Read(_bytesReadArray, 0, count);
-					}
-					else
-					{
-						var bytesArray = new byte[count];
-						_serialPort.Read(bytesArray, 0, count);
-						var oldLength = _bytesReadArray.Length;
-						Array.Resize(ref _bytesReadArray, _bytesReadArray.Length + count);
-						Array.Copy(bytesArray, 0, _bytesReadArray, oldLength, count);
-					}
-					var result = CheckData(_bytesReadArray);
-					_timerOut.Stop();
-					switch (result.Status)
-					{
-						case ModBusStatus.PresetMultipleRegistersOK:
-						case ModBusStatus.ReadHoldingRegistersOK:
-						case ModBusStatus.CustomFunctionOk:
-							_waitResponse = false;
-							RecieveCounter++;
-							RaisePacketDetected(_bytesReadArray);
-							_eventArgument = result;
-							OnExchangeEnd();
-							break;
-						case ModBusStatus.CRCError:
-						case ModBusStatus.UnknowPacket:
-						case ModBusStatus.None:
-						case ModBusStatus.NoEndingSymbol:
-						case ModBusStatus.TimeOutError:
-							_timerCheck.Start();
-							_timerOut.Reset();
-							break;
-						default:
-							ErrorCounter++;
-							RaisePacketDetected(_bytesReadArray);
-							if (!CheckRepeat())
-							{
+						if (_bytesReadArray == null || _bytesReadArray.Length == 0)
+						{
+							_bytesReadArray = new byte[count];
+							_serialPort.Read(_bytesReadArray, 0, count);
+						}
+						else
+						{
+							var bytesArray = new byte[count];
+							_serialPort.Read(bytesArray, 0, count);
+							var oldLength = _bytesReadArray.Length;
+							Array.Resize(ref _bytesReadArray, _bytesReadArray.Length + count);
+							Array.Copy(bytesArray, 0, _bytesReadArray, oldLength, count);
+						}
+
+						var result = CheckData(_bytesReadArray);
+						_timerOut.Stop();
+						switch (result.Status)
+						{
+							case ModBusStatus.PresetMultipleRegistersOK:
+							case ModBusStatus.ReadHoldingRegistersOK:
+							case ModBusStatus.CustomFunctionOk:
+
 								_waitResponse = false;
+								ReceiveCounter++;
+								RaisePacketDetected(_bytesReadArray);
 								_eventArgument = result;
 								OnExchangeEnd();
-							}
-							break;
+								break;
+							case ModBusStatus.CRCError:
+							case ModBusStatus.UnknowPacket:
+							case ModBusStatus.None:
+							case ModBusStatus.NoEndingSymbol:
+							case ModBusStatus.TimeOutError:
+								_timerCheck.Start();
+								_timerOut.Reset();
+								break;
+							default:
+								ErrorCounter++;
+								RaisePacketDetected(_bytesReadArray);
+								if (!CheckRepeat())
+								{
+									_waitResponse = false;
+									_eventArgument = result;
+									OnExchangeEnd();
+								}
+								break;
+						}
+						return;
 					}
-					return;
 				}
+				catch (InvalidOperationException exc)
+				{
+					if (CatchSerialException(exc))
+						return;
+				}
+				_timerCheck.Start();
 			}
-			catch (InvalidOperationException exc)
-			{
-				if (CatchSerialException(exc))
-					return;
-			}
-			_timerCheck.Start();
 		}
 
 		/// <summary>
@@ -269,28 +274,31 @@ namespace Butek.ModBus
 
 		private void timerOut_Tick(object sender, EventArgs e)
 		{
-			var result = CheckData(_bytesReadArray);
-			switch (result.Status)
+			lock (_timerCheck)
 			{
-				case ModBusStatus.PresetMultipleRegistersOK:
-				case ModBusStatus.ReadHoldingRegistersOK:
-				case ModBusStatus.CustomFunctionOk:
-					_waitResponse = false;
-					RecieveCounter++;
-					_timerCheck.Stop();
-					RaisePacketDetected(_bytesReadArray);
-					_eventArgument = result;
-					OnExchangeEnd();
-					break;
-
-				default:
-					ErrorCounter++;
-					if (!CheckRepeat())
-					{
-						_eventArgument = new ModBusEventArg() { Status = result.Status };
+				var result = CheckData(_bytesReadArray);
+				switch (result.Status)
+				{
+					case ModBusStatus.PresetMultipleRegistersOK:
+					case ModBusStatus.ReadHoldingRegistersOK:
+					case ModBusStatus.CustomFunctionOk:
+						_waitResponse = false;
+						ReceiveCounter++;
+						_timerCheck.Stop();
+						RaisePacketDetected(_bytesReadArray);
+						_eventArgument = result;
 						OnExchangeEnd();
-					}
-					break;
+						break;
+
+					default:
+						ErrorCounter++;
+						if (!CheckRepeat())
+						{
+							_eventArgument = new ModBusEventArg() { Status = result.Status };
+							OnExchangeEnd();
+						}
+						break;
+				}
 			}
 		}
 
@@ -385,8 +393,13 @@ namespace Butek.ModBus
 				// Read Holding Registers
 				case 3:
 					ea.data = new short[buffer[2] / 2];
-					ea.Status = ModBusStatus.ReadHoldingRegistersOK;
-
+					if (ea.Data.Length == _waitRegs)
+						ea.Status = ModBusStatus.ReadHoldingRegistersOK;
+					else
+					{
+						ea.Status = ModBusStatus.InvalidResponse;
+					}
+					
 					int i = 0;
 					while (i != ea.data.Length)
 					{
@@ -394,6 +407,7 @@ namespace Butek.ModBus
 						ea.data[i] += buffer[i * 2 + 1 + 3];
 						i++;
 					}
+
 					break;
 
 				// Preset Multiple Registers
@@ -496,7 +510,10 @@ namespace Butek.ModBus
 
 			_timerOut.Interval = _timeOut;
 		}
-
+		/// <summary>
+		/// Ожидаемое количество регистров в ответе
+		/// </summary>
+		private int _waitRegs;
 		/// <summary>
 		///     запрос на чтение двоичного содержания регистров подчиненого
 		/// </summary>
@@ -518,6 +535,7 @@ namespace Butek.ModBus
 
 				_bufferTransmit[i++] = (byte)(numberReg >> 8);
 				_bufferTransmit[i++] = (byte)(numberReg);
+				_waitRegs = numberReg;
 
 				_bufferTransmit[i++] = (byte)CRC.GetCRC(_bufferTransmit, 6);
 				_bufferTransmit[i] = (byte)(CRC.GetCRC(_bufferTransmit, 6) >> 8);
@@ -607,7 +625,7 @@ namespace Butek.ModBus
 		{
 			ErrorCounter = 0;
 			SendCounter = 0;
-			RecieveCounter = 0;
+			ReceiveCounter = 0;
 		}
 		/// <summary>
 		///     Повтор посылки последней
@@ -630,8 +648,8 @@ namespace Butek.ModBus
 			{
 				Array.Resize(ref _bytesReadArray, 0);
 				_bytesRead = int.MaxValue;
-				_serialPort.DiscardInBuffer();
 				_serialPort.Write(_bufferTransmit, 0, _bufferTransmit.Length);
+				_serialPort.DiscardInBuffer();
 			}
 			catch (InvalidOperationException exc)
 			{
@@ -804,7 +822,8 @@ namespace Butek.ModBus
 		/// <summary>
 		/// В полученной посылке нет символа окончания
 		/// </summary>
-		NoEndingSymbol
+		NoEndingSymbol,
+		InvalidResponse
 	}
 
 	public class PacketDetectedEventArg : EventArgs
