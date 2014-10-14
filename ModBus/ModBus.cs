@@ -659,11 +659,11 @@ namespace Butek.ModBus
 		void RepeatRequest()
 		{
 			// очищаем буфер приемный
+			var buf = new List<byte>(_bufferTransmit);
 			try
 			{
 				Array.Resize(ref _bytesReadArray, 0);
-				_bytesRead = int.MaxValue;
-				var buf = new List<byte>(_bufferTransmit);
+				_bytesRead = int.MaxValue;				
 				if(EndingSymbolEnableTx)
 					buf.Add(EndingSymbolTx);
 				_serialPort.Write(buf.ToArray(), 0, buf.Count);
@@ -681,13 +681,13 @@ namespace Butek.ModBus
 			}
 #if DEBUG
 			Console.Write("{0} Send:", _serialPort.PortName);
-			foreach (byte b in _bufferTransmit)
+			foreach (byte b in buf)
 			{
 				Console.Write("{0} ", b.ToString("X2"));
 			}
 			Console.WriteLine();
 #endif
-			_packetDetectedArgument.Data = _bufferTransmit;
+			_packetDetectedArgument.Data = buf.ToArray();
 			_packetDetectedArgument.IsTransmitted = true;
 
 			SendCounter++;
