@@ -17,5 +17,7 @@ namespace Butek.ModBus
 		public Handshake FlowControl { get; set; }
 		public bool EndingSymbolEnable { get; set; }
 		public byte EndingSymbol { get; set; }
+		public bool EndingSymbolEnableTx { get; set; }
+		public byte EndingSymbolTx { get; set; }
 	}
 }

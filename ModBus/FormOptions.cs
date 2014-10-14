@@ -37,7 +37,9 @@ namespace Butek.ModBus
 			SelectTimeout.Text = SettingsOptions.Default.timeOut.ToString(CultureInfo.InvariantCulture);
 			SelectNumberRepeat.Text = SettingsOptions.Default.numberRepeat.ToString(CultureInfo.InvariantCulture);
 			checkBoxEndingSymbolEnabled.Checked = SettingsOptions.Default.endingSymbolEnable;
+			checkBoxEndingSymbolEnabledTx.Checked = SettingsOptions.Default.endingSymbolEnabledTx;
 			textBoxEndingSymbol.Text = SettingsOptions.Default.endingSymbol.ToString(CultureInfo.InvariantCulture);
+			textBoxEndingSymbolTx.Text = SettingsOptions.Default.endingSymbolTx.ToString(CultureInfo.InvariantCulture);
 			Binding();
 
 		}
@@ -62,7 +64,9 @@ namespace Butek.ModBus
 			SelectTimeout.Text = settings.TimeOut.ToString(CultureInfo.InvariantCulture);
 			SelectNumberRepeat.Text = settings.NumberRepeat.ToString(CultureInfo.InvariantCulture);
 			checkBoxEndingSymbolEnabled.Checked = settings.EndingSymbolEnable;
+			checkBoxEndingSymbolEnabledTx.Checked = settings.EndingSymbolEnableTx;
 			textBoxEndingSymbol.Text = settings.EndingSymbol.ToString(CultureInfo.InvariantCulture);
+			textBoxEndingSymbolTx.Text = settings.EndingSymbolTx.ToString(CultureInfo.InvariantCulture);
 			Binding();
 
 		}
@@ -71,6 +75,9 @@ namespace Butek.ModBus
 		{
 			var binding = new Binding("Enabled", checkBoxEndingSymbolEnabled, "Checked");
 			textBoxEndingSymbol.DataBindings.Add(binding);
+
+			binding = new Binding("Enabled", checkBoxEndingSymbolEnabledTx, "Checked");
+			textBoxEndingSymbolTx.DataBindings.Add(binding);
 		}
 		public CustomSettings Settings { get; private set; }
 
@@ -162,7 +169,9 @@ namespace Butek.ModBus
 				SettingsOptions.Default.timeOut = int.Parse(SelectTimeout.Text);
 				SettingsOptions.Default.numberRepeat = int.Parse(SelectNumberRepeat.Text);
 				SettingsOptions.Default.endingSymbol = byte.Parse(textBoxEndingSymbol.Text);
+				SettingsOptions.Default.endingSymbolTx = byte.Parse(textBoxEndingSymbolTx.Text);
 				SettingsOptions.Default.endingSymbolEnable = checkBoxEndingSymbolEnabled.Checked;
+				SettingsOptions.Default.endingSymbolEnabledTx = checkBoxEndingSymbolEnabledTx.Checked;
 				SettingsOptions.Default.Save();
 			}
 			else
@@ -178,7 +187,9 @@ namespace Butek.ModBus
 						StopBits = (StopBits)SelectStopBits.SelectedItem,
 						TimeOut = int.Parse(SelectTimeout.Text),
 						EndingSymbol = byte.Parse(textBoxEndingSymbol.Text),
-						EndingSymbolEnable = checkBoxEndingSymbolEnabled.Checked
+						EndingSymbolTx = byte.Parse(textBoxEndingSymbolTx.Text),
+						EndingSymbolEnable = checkBoxEndingSymbolEnabled.Checked,
+						EndingSymbolEnableTx = checkBoxEndingSymbolEnabledTx.Checked
 					};
 				Settings = settings;
 				SaveSettings(_fileName, settings);

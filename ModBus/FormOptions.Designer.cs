@@ -55,6 +55,10 @@ namespace Butek.ModBus
 			this.label9 = new System.Windows.Forms.Label();
 			this.textBoxEndingSymbol = new System.Windows.Forms.TextBox();
 			this.checkBoxEndingSymbolEnabled = new System.Windows.Forms.CheckBox();
+			this.label10 = new System.Windows.Forms.Label();
+			this.checkBoxEndingSymbolEnabledTx = new System.Windows.Forms.CheckBox();
+			this.label11 = new System.Windows.Forms.Label();
+			this.textBoxEndingSymbolTx = new System.Windows.Forms.TextBox();
 			this.tabControl1.SuspendLayout();
 			this.tabPage1.SuspendLayout();
 			this.tableLayoutPanel2.SuspendLayout();
@@ -66,7 +70,7 @@ namespace Butek.ModBus
 			// 
 			this.buttonOK.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.buttonOK.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.buttonOK.Location = new System.Drawing.Point(145, 201);
+			this.buttonOK.Location = new System.Drawing.Point(198, 201);
 			this.buttonOK.Margin = new System.Windows.Forms.Padding(1);
 			this.buttonOK.Name = "buttonOK";
 			this.buttonOK.Size = new System.Drawing.Size(75, 23);
@@ -79,7 +83,7 @@ namespace Butek.ModBus
 			// 
 			this.buttonСancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.buttonСancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.buttonСancel.Location = new System.Drawing.Point(226, 201);
+			this.buttonСancel.Location = new System.Drawing.Point(279, 201);
 			this.buttonСancel.Margin = new System.Windows.Forms.Padding(1);
 			this.buttonСancel.Name = "buttonСancel";
 			this.buttonСancel.Size = new System.Drawing.Size(75, 23);
@@ -90,7 +94,7 @@ namespace Butek.ModBus
 			// SelectTimeout
 			// 
 			this.SelectTimeout.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.SelectTimeout.Location = new System.Drawing.Point(221, 3);
+			this.SelectTimeout.Location = new System.Drawing.Point(274, 3);
 			this.SelectTimeout.Name = "SelectTimeout";
 			this.SelectTimeout.Size = new System.Drawing.Size(58, 20);
 			this.SelectTimeout.TabIndex = 19;
@@ -99,7 +103,7 @@ namespace Butek.ModBus
 			// 
 			this.label8.Anchor = System.Windows.Forms.AnchorStyles.Right;
 			this.label8.AutoSize = true;
-			this.label8.Location = new System.Drawing.Point(147, 6);
+			this.label8.Location = new System.Drawing.Point(200, 5);
 			this.label8.Name = "label8";
 			this.label8.Size = new System.Drawing.Size(68, 13);
 			this.label8.TabIndex = 18;
@@ -224,7 +228,7 @@ namespace Butek.ModBus
 			// 
 			this.label1.Anchor = System.Windows.Forms.AnchorStyles.Right;
 			this.label1.AutoSize = true;
-			this.label1.Location = new System.Drawing.Point(99, 32);
+			this.label1.Location = new System.Drawing.Point(152, 29);
 			this.label1.Name = "label1";
 			this.label1.Size = new System.Drawing.Size(116, 13);
 			this.label1.TabIndex = 18;
@@ -233,7 +237,7 @@ namespace Butek.ModBus
 			// SelectNumberRepeat
 			// 
 			this.SelectNumberRepeat.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.SelectNumberRepeat.Location = new System.Drawing.Point(221, 29);
+			this.SelectNumberRepeat.Location = new System.Drawing.Point(274, 27);
 			this.SelectNumberRepeat.Name = "SelectNumberRepeat";
 			this.SelectNumberRepeat.Size = new System.Drawing.Size(58, 20);
 			this.SelectNumberRepeat.TabIndex = 19;
@@ -271,7 +275,7 @@ namespace Butek.ModBus
 			this.tabControl1.Location = new System.Drawing.Point(5, 3);
 			this.tabControl1.Name = "tabControl1";
 			this.tabControl1.SelectedIndex = 0;
-			this.tabControl1.Size = new System.Drawing.Size(296, 197);
+			this.tabControl1.Size = new System.Drawing.Size(349, 197);
 			this.tabControl1.TabIndex = 20;
 			// 
 			// tabPage1
@@ -322,7 +326,7 @@ namespace Butek.ModBus
 			this.tabPage2.Location = new System.Drawing.Point(4, 22);
 			this.tabPage2.Name = "tabPage2";
 			this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-			this.tabPage2.Size = new System.Drawing.Size(288, 171);
+			this.tabPage2.Size = new System.Drawing.Size(341, 171);
 			this.tabPage2.TabIndex = 1;
 			this.tabPage2.Text = "Протокол";
 			this.tabPage2.UseVisualStyleBackColor = true;
@@ -337,45 +341,52 @@ namespace Butek.ModBus
 			this.tableLayoutPanel1.Controls.Add(this.label8, 0, 0);
 			this.tableLayoutPanel1.Controls.Add(this.SelectNumberRepeat, 1, 1);
 			this.tableLayoutPanel1.Controls.Add(this.label1, 0, 1);
-			this.tableLayoutPanel1.Controls.Add(this.label9, 0, 3);
 			this.tableLayoutPanel1.Controls.Add(this.textBoxEndingSymbol, 1, 3);
 			this.tableLayoutPanel1.Controls.Add(this.checkBoxEndingSymbolEnabled, 1, 2);
+			this.tableLayoutPanel1.Controls.Add(this.label9, 0, 3);
+			this.tableLayoutPanel1.Controls.Add(this.label10, 0, 4);
+			this.tableLayoutPanel1.Controls.Add(this.checkBoxEndingSymbolEnabledTx, 1, 4);
+			this.tableLayoutPanel1.Controls.Add(this.label11, 0, 5);
+			this.tableLayoutPanel1.Controls.Add(this.textBoxEndingSymbolTx, 1, 5);
 			this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Top;
 			this.tableLayoutPanel1.Location = new System.Drawing.Point(3, 3);
 			this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-			this.tableLayoutPanel1.RowCount = 4;
+			this.tableLayoutPanel1.RowCount = 6;
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-			this.tableLayoutPanel1.Size = new System.Drawing.Size(282, 105);
+			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25F));
+			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+			this.tableLayoutPanel1.Size = new System.Drawing.Size(335, 141);
 			this.tableLayoutPanel1.TabIndex = 20;
 			// 
 			// label3
 			// 
 			this.label3.Anchor = System.Windows.Forms.AnchorStyles.Right;
 			this.label3.AutoSize = true;
-			this.label3.Location = new System.Drawing.Point(8, 58);
+			this.label3.Location = new System.Drawing.Point(20, 53);
 			this.label3.Name = "label3";
-			this.label3.Size = new System.Drawing.Size(207, 13);
+			this.label3.Size = new System.Drawing.Size(248, 13);
 			this.label3.TabIndex = 18;
-			this.label3.Text = "Разрешить символ окончания посылки";
+			this.label3.Text = "Разрешить символ окончания посылки (прием)";
 			// 
 			// label9
 			// 
 			this.label9.Anchor = System.Windows.Forms.AnchorStyles.Right;
 			this.label9.AutoSize = true;
-			this.label9.Location = new System.Drawing.Point(113, 85);
+			this.label9.Location = new System.Drawing.Point(125, 77);
 			this.label9.Name = "label9";
-			this.label9.Size = new System.Drawing.Size(102, 13);
+			this.label9.Size = new System.Drawing.Size(143, 13);
 			this.label9.TabIndex = 18;
-			this.label9.Text = "Символ окончания";
+			this.label9.Text = "Символ окончания (прием)";
 			// 
 			// textBoxEndingSymbol
 			// 
 			this.textBoxEndingSymbol.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.textBoxEndingSymbol.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.textBoxEndingSymbol.Location = new System.Drawing.Point(221, 81);
+			this.textBoxEndingSymbol.Location = new System.Drawing.Point(274, 75);
 			this.textBoxEndingSymbol.Name = "textBoxEndingSymbol";
 			this.textBoxEndingSymbol.Size = new System.Drawing.Size(58, 20);
 			this.textBoxEndingSymbol.TabIndex = 19;
@@ -384,11 +395,50 @@ namespace Butek.ModBus
 			// 
 			this.checkBoxEndingSymbolEnabled.Anchor = System.Windows.Forms.AnchorStyles.None;
 			this.checkBoxEndingSymbolEnabled.AutoSize = true;
-			this.checkBoxEndingSymbolEnabled.Location = new System.Drawing.Point(242, 58);
+			this.checkBoxEndingSymbolEnabled.Location = new System.Drawing.Point(295, 53);
 			this.checkBoxEndingSymbolEnabled.Name = "checkBoxEndingSymbolEnabled";
 			this.checkBoxEndingSymbolEnabled.Size = new System.Drawing.Size(15, 14);
 			this.checkBoxEndingSymbolEnabled.TabIndex = 20;
 			this.checkBoxEndingSymbolEnabled.UseVisualStyleBackColor = true;
+			// 
+			// label10
+			// 
+			this.label10.Anchor = System.Windows.Forms.AnchorStyles.Right;
+			this.label10.AutoSize = true;
+			this.label10.Location = new System.Drawing.Point(5, 99);
+			this.label10.Name = "label10";
+			this.label10.Size = new System.Drawing.Size(263, 13);
+			this.label10.TabIndex = 18;
+			this.label10.Text = "Разрешить символ окончания посылки (передача)";
+			// 
+			// checkBoxEndingSymbolEnabledTx
+			// 
+			this.checkBoxEndingSymbolEnabledTx.Anchor = System.Windows.Forms.AnchorStyles.None;
+			this.checkBoxEndingSymbolEnabledTx.AutoSize = true;
+			this.checkBoxEndingSymbolEnabledTx.Location = new System.Drawing.Point(295, 99);
+			this.checkBoxEndingSymbolEnabledTx.Name = "checkBoxEndingSymbolEnabledTx";
+			this.checkBoxEndingSymbolEnabledTx.Size = new System.Drawing.Size(15, 14);
+			this.checkBoxEndingSymbolEnabledTx.TabIndex = 20;
+			this.checkBoxEndingSymbolEnabledTx.UseVisualStyleBackColor = true;
+			// 
+			// label11
+			// 
+			this.label11.Anchor = System.Windows.Forms.AnchorStyles.Right;
+			this.label11.AutoSize = true;
+			this.label11.Location = new System.Drawing.Point(110, 122);
+			this.label11.Name = "label11";
+			this.label11.Size = new System.Drawing.Size(158, 13);
+			this.label11.TabIndex = 18;
+			this.label11.Text = "Символ окончания (передача)";
+			// 
+			// textBoxEndingSymbolTx
+			// 
+			this.textBoxEndingSymbolTx.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.textBoxEndingSymbolTx.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.textBoxEndingSymbolTx.Location = new System.Drawing.Point(274, 119);
+			this.textBoxEndingSymbolTx.Name = "textBoxEndingSymbolTx";
+			this.textBoxEndingSymbolTx.Size = new System.Drawing.Size(58, 20);
+			this.textBoxEndingSymbolTx.TabIndex = 19;
 			// 
 			// FormOptions
 			// 
@@ -396,7 +446,7 @@ namespace Butek.ModBus
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.buttonСancel;
-			this.ClientSize = new System.Drawing.Size(303, 227);
+			this.ClientSize = new System.Drawing.Size(356, 227);
 			this.Controls.Add(this.tabControl1);
 			this.Controls.Add(this.buttonСancel);
 			this.Controls.Add(this.buttonOK);
@@ -448,5 +498,9 @@ namespace Butek.ModBus
 		private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
 		private System.Windows.Forms.Label label9;
 		private System.Windows.Forms.CheckBox checkBoxEndingSymbolEnabled;
+		private System.Windows.Forms.Label label10;
+		private System.Windows.Forms.CheckBox checkBoxEndingSymbolEnabledTx;
+		private System.Windows.Forms.Label label11;
+		internal System.Windows.Forms.TextBox textBoxEndingSymbolTx;
 	}
 }

@@ -142,5 +142,29 @@ namespace Butek.ModBus.Properties {
                 this["endingSymbol"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool endingSymbolEnabledTx {
+            get {
+                return ((bool)(this["endingSymbolEnabledTx"]));
+            }
+            set {
+                this["endingSymbolEnabledTx"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public byte endingSymbolTx {
+            get {
+                return ((byte)(this["endingSymbolTx"]));
+            }
+            set {
+                this["endingSymbolTx"] = value;
+            }
+        }
     }
 }

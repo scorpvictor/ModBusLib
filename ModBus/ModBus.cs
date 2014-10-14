@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
@@ -171,7 +172,17 @@ namespace Butek.ModBus
 			get { return _endingSymbolEnable; }
 			set { _endingSymbolEnable = value; }
 		}
+		public byte EndingSymbolTx
+		{
+			get { return _endingSymbol; }
+			set { _endingSymbol = value; }
+		}
 
+		public bool EndingSymbolEnableTx
+		{
+			get { return _endingSymbolEnable; }
+			set { _endingSymbolEnable = value; }
+		}
 		#endregion
 
 		void Init()
@@ -492,6 +503,8 @@ namespace Butek.ModBus
 				NumberRepeatMax = SettingsOptions.Default.numberRepeat;
 				EndingSymbolEnable = SettingsOptions.Default.endingSymbolEnable;
 				EndingSymbol = SettingsOptions.Default.endingSymbol;
+				EndingSymbolEnableTx = SettingsOptions.Default.endingSymbolEnabledTx;
+				EndingSymbolTx = SettingsOptions.Default.endingSymbolTx;
 			}
 			else
 			{
@@ -505,6 +518,8 @@ namespace Butek.ModBus
 				_timeOut = settings.TimeOut;
 				EndingSymbolEnable = settings.EndingSymbolEnable;
 				EndingSymbol = settings.EndingSymbol;
+				EndingSymbolEnableTx = settings.EndingSymbolEnableTx;
+				EndingSymbolTx = settings.EndingSymbolTx;
 				NumberRepeatMax = settings.NumberRepeat;
 			}
 
@@ -648,7 +663,10 @@ namespace Butek.ModBus
 			{
 				Array.Resize(ref _bytesReadArray, 0);
 				_bytesRead = int.MaxValue;
-				_serialPort.Write(_bufferTransmit, 0, _bufferTransmit.Length);
+				var buf = new List<byte>(_bufferTransmit);
+				if(EndingSymbolEnableTx)
+					buf.Add(EndingSymbolTx);
+				_serialPort.Write(buf.ToArray(), 0, buf.Count);
 				_serialPort.DiscardInBuffer();
 			}
 			catch (InvalidOperationException exc)
